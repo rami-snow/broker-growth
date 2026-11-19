@@ -1,0 +1,12 @@
+node_modules/
+.next/
+.pnpm-store/
+test-results/
+playwright-report/
+coverage/
+*.tsbuildinfo
+.env
+.env.local
+.env.*.local
+supabase/.branches/
+supabase/.temp/
