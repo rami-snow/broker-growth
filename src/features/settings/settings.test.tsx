@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { PrototypeProvider } from "@/components/prototype-provider";
-import { SettingsScreen } from "./settings-screen";
+import { SettingsScreen, SettingsView } from "./settings-screen";
 import { CampaignsScreen } from "@/features/campaigns/campaigns-screen";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => "/settings" }));
@@ -23,6 +23,17 @@ describe("Settings (frame 08)", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Audit log" }));
     expect(screen.getAllByRole("row").length).toBeGreaterThan(2);
     expect(screen.queryByRole("button", { name: /delete|edit/i })).not.toBeInTheDocument();
+  });
+});
+
+describe("Settings view with a Supabase snapshot", () => {
+  it("renders the same sections from persistent data, including System audit entries", () => {
+    render(<SettingsView snapshot={{ brokerage: { name: "Harbourlight Mortgage Co.", region: null }, currentMembershipId: "m1", members: [{ id: "m1", name: "Alex Morgan", position: "Brokerage administrator", status: "Active", capabilities: ["settings.view"] }], audit: [{ id: "e1", occurredAt: "2026-11-13T01:00:00Z", actorType: "System", record: "Household", summary: "Review opportunity generated" }] }}/>);
+    expect(screen.getByText("Not recorded")).toBeVisible();
+    fireEvent.click(screen.getByRole("tab", { name: "Team and positions" }));
+    expect(screen.getByRole("cell", { name: "Brokerage administrator" })).toBeVisible();
+    fireEvent.click(screen.getByRole("tab", { name: "Audit log" }));
+    expect(screen.getByRole("row", { name: /Review opportunity generated/ })).toHaveTextContent("System");
   });
 });
 
