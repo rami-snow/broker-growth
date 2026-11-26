@@ -1,3 +1,4 @@
+import { DEFAULT_ORGANISATION_TIME_ZONE } from "@/platform/time/zoned";
 import { contactChannels, contactOutcomes, type ActivityEvent, type ContactAttemptInput } from "@/platform/audit/models";
 import type { Appointment, NewAppointmentInput } from "@/platform/appointments/models";
 import type { MembershipId, TenantContext } from "@/platform/core/models";
@@ -63,7 +64,7 @@ export class InMemoryOperationsRepository {
     if (input.nextActionAt) {
       lead.nextActionAt = input.nextActionAt;
       this.touch(lead);
-      this.appendActivity(context, { leadId, type: "lead.next_action_changed", summary: `Next action set for ${new Date(input.nextActionAt).toLocaleString("en-AU")}`, nextActionAt: input.nextActionAt });
+      this.appendActivity(context, { leadId, type: "lead.next_action_changed", summary: `Next action set for ${new Date(input.nextActionAt).toLocaleString("en-AU", { timeZone: DEFAULT_ORGANISATION_TIME_ZONE })}`, nextActionAt: input.nextActionAt });
     }
     return lead;
   }
@@ -80,7 +81,7 @@ export class InMemoryOperationsRepository {
     assertLeadTransition(lead.status, "Discovery booked");
     const appointment: Appointment = { ...input, id: id("apt") as Appointment["id"], organisationId: context.organisationId, status: "Booked" };
     this.state.appointments.push(appointment); this.transitionLead(context, lead.id, "Discovery booked", "Discovery appointment booked");
-    this.appendActivity(context, { leadId: lead.id, type: "appointment.created", summary: `Discovery appointment booked for ${new Date(input.startsAt).toLocaleString("en-AU")}` }); return appointment;
+    this.appendActivity(context, { leadId: lead.id, type: "appointment.created", summary: `Discovery appointment booked for ${new Date(input.startsAt).toLocaleString("en-AU", { timeZone: DEFAULT_ORGANISATION_TIME_ZONE })}` }); return appointment;
   }
   private touch(lead: MortgageLead) { lead.updatedAt = this.now().toISOString(); lead.version += 1; }
 }

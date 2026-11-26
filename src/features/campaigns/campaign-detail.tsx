@@ -1,5 +1,6 @@
 "use client";
 
+import { zonedLocalToIso } from "@/platform/time/zoned";
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowLeft, Check } from "lucide-react";
@@ -14,7 +15,7 @@ import type { ContactId } from "@/platform/contacts/models";
 import { hasCapability } from "@/verticals/mortgage/permissions";
 
 const statusTone = (status: CampaignStatus) => status === "Approved" ? "success" : status === "Rejected" || status === "Cancelled" ? "danger" : status === "Ready for review" ? "warning" : "neutral";
-const format = (value: string) => new Intl.DateTimeFormat("en-AU", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+const format = (value: string) => new Intl.DateTimeFormat("en-AU", { dateStyle: "medium", timeStyle: "short", timeZone: "Australia/Sydney" }).format(new Date(value));
 const resolveCopy = (value: string, fields: Record<string, string | number | boolean | null>) => value.replace(/\{\{\s*([a-z0-9._-]+)\s*\}\}/gi, (_, key: string) => String(fields[key] ?? `[Unresolved: ${key}]`));
 
 export function CampaignDetail({ campaignId }: { campaignId: string }) {
@@ -121,7 +122,7 @@ function ConsentChangeModal({ campaignId, recipients, onClose }: { campaignId: C
     <form className="form-grid single" action={form => {
       try {
         const data = Object.fromEntries(form.entries()) as Record<string, string>;
-        mutate(() => campaignRepo.recordExternalConsentChange(context, campaignId, { contactId: data.contactId as ContactId, channel: data.channel as CampaignChannel, status: data.status as ConsentChannelStatus, source: data.source, effectiveAt: new Date(data.effectiveAt).toISOString(), reason: data.reason, externalActionConfirmed: data.externalActionConfirmed === "on" }));
+        mutate(() => campaignRepo.recordExternalConsentChange(context, campaignId, { contactId: data.contactId as ContactId, channel: data.channel as CampaignChannel, status: data.status as ConsentChannelStatus, source: data.source, effectiveAt: zonedLocalToIso(data.effectiveAt), reason: data.reason, externalActionConfirmed: data.externalActionConfirmed === "on" }));
         onClose();
       } catch (cause) { setError(cause instanceof Error ? cause.message : "Consent change could not be recorded"); }
     }}>

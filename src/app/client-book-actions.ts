@@ -1,5 +1,6 @@
 "use server";
 
+import { zonedLocalToIso } from "@/platform/time/zoned";
 import { revalidatePath } from "next/cache";
 import { createServerSupabaseClient } from "@/platform/auth/server-client";
 import { requireVerifiedCurrentUser } from "@/platform/auth/current-user";
@@ -91,4 +92,4 @@ function optionalUuid(data:FormData,key:string){const result=optional(data,key);
 function positiveInteger(data:FormData,key:string){const result=Number(value(data,key));if(!Number.isInteger(result)||result<1)throw new Error("The record version is invalid. Refresh and try again.");return result;}
 function oneOf<T extends string>(data:FormData,key:string,allowed:readonly T[]){const result=value(data,key);if(!allowed.includes(result as T))throw new Error("Choose a valid option.");return result as T;}
 function optionalDate(data:FormData,key:string){const result=optional(data,key);if(result&&!/^\d{4}-\d{2}-\d{2}$/.test(result))throw new Error("Enter a valid date.");return result;}
-function dateTime(data:FormData,key:string){const result=required(data,key),parsed=new Date(result);if(!Number.isFinite(parsed.getTime()))throw new Error("Enter a valid due date and time.");return parsed.toISOString();}
+function dateTime(data:FormData,key:string){const result=required(data,key);try{return zonedLocalToIso(result);}catch{throw new Error("Enter a valid due date and time.");}}

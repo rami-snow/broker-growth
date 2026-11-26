@@ -158,7 +158,7 @@ test("annual review campaign is previewed and approved without delivery", async 
 
 test("command bar searches records and offers create and go-to actions", async ({ page }) => {
   await page.goto("/today");
-  await page.keyboard.press("Control+k");
+  await page.getByRole("button",{name:/^Search/}).click();
   const dialog=page.getByRole("dialog",{name:"Command bar"});
   await expect(dialog).toBeVisible();
   await dialog.getByRole("combobox").fill("Mila");
@@ -170,6 +170,10 @@ test("command bar searches records and offers create and go-to actions", async (
   await expect(page.getByRole("heading",{name:"Mila Hart",level:1})).toBeVisible();
   await page.keyboard.press("g"); await page.keyboard.press("c");
   await expect(page).toHaveURL(/\/client-book$/);
+  await page.keyboard.press("Control+k");
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("combobox").fill("zzzz");
+  await expect(dialog.getByText("No matching records. Try a name, email or phone number.")).toBeVisible();
 });
 
 test("campaign review panel approves a plan without scheduling anything", async ({ page }) => {

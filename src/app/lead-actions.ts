@@ -1,5 +1,6 @@
 "use server";
 
+import { zonedLocalToIso } from "@/platform/time/zoned";
 import { revalidatePath } from "next/cache";
 import { requireVerifiedCurrentUser } from "@/platform/auth/current-user";
 import { createServerSupabaseClient } from "@/platform/auth/server-client";
@@ -58,6 +59,6 @@ export async function persistentOperationsContext() {
 function value(data: FormData, key: string) { return String(data.get(key) ?? "").trim(); }
 function optional(data: FormData, key: string) { const result = value(data, key); return result || undefined; }
 function integer(data: FormData, key: string) { const result = Number(value(data, key)); if (!Number.isInteger(result)) throw new Error(`${key} must be a whole number.`); return result; }
-function dateTime(data: FormData, key: string, required: boolean) { const raw = value(data, key); if (!raw && !required) return undefined; const parsed = Date.parse(raw); if (!Number.isFinite(parsed)) throw new Error(`Enter a valid ${key}.`); return new Date(parsed).toISOString(); }
+function dateTime(data: FormData, key: string, required: boolean) { const raw = value(data, key); if (!raw && !required) return undefined; try { return zonedLocalToIso(raw); } catch { throw new Error(`Enter a valid ${key}.`); } }
 function failure(message: string): LeadActionState { return { ok: false, message }; }
 function successMessage(operation: string) { return ({ create: "Lead created", claim: "Lead claimed", assign: "Owner assigned", transition: "Status updated", contact: "Contact attempt recorded", note: "Note added", task: "Follow-up task created", appointment: "Discovery appointment booked", referral:"Referral attribution updated", reopen: "Lead reopened into nurture" } as Record<string,string>)[operation] ?? "Action completed"; }
