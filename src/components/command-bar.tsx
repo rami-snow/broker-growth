@@ -41,15 +41,15 @@ export function CommandBar({ capabilities, search }: { capabilities: readonly st
   useEffect(() => {
     if (!open) return;
     const id = ++requestId.current;
-    if (query.trim().length < 2) { setRecords([]); return; }
+    if (query.trim().length < 2) return;
     const handle = window.setTimeout(() => startTransition(async () => { const result = await search(query); if (requestId.current === id) { setRecords(result); setActive(0); } }), 150);
     return () => window.clearTimeout(handle);
   }, [open, query, search]);
 
   const entries: Entry[] = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const recordEntries = records.map(record => ({ key: `${record.kind}:${record.id}`, label: record.title, description: record.description, href: record.href, hint: commandOpenLabels[record.kind], group: commandGroupLabels[record.kind] }));
-    const filter = <T extends { label: string }>(items: T[]) => q ? items.filter(item => item.label.toLowerCase().includes(q)) : items;
+    const recordEntries = (q.length >= 2 ? records : []).map(record => ({ key: `${record.kind}:${record.id}`, label: record.title, description: record.description, href: record.href, hint: commandOpenLabels[record.kind], group: commandGroupLabels[record.kind] }));
+    const filter = <T extends { label: string }>(items: T[]) => { const matching = q ? items.filter(item => item.label.toLowerCase().includes(q)) : items; return matching.length ? matching : items; };
     return [...recordEntries, ...filter(create).map(item => ({ key: item.href, label: item.label, href: item.href, group: "Actions" })), ...filter(goTo).map(item => ({ key: `go:${item.href}`, label: item.label, href: item.href, hint: item.shortcut ? `G then ${item.shortcut}` : undefined, group: "Go to" }))];
   }, [records, create, goTo, query]);
   if (!open) return null;

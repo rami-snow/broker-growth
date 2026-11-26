@@ -1,24 +1,11 @@
 "use client";
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Filter, Plus } from "lucide-react";
-import { PageTitle } from "@/components/page-title";
-import { Badge, Button, EmptyState, SearchInput, Select, Status, Table } from "@/components/ui";
 import { usePrototype } from "@/components/prototype-provider";
-import { isActiveUnassignedLead, membershipName } from "@/verticals/mortgage/repositories/operations-repository";
 import { hasCapability } from "@/verticals/mortgage/permissions";
+import { LeadsListView } from "./leads-list-view";
 import { NewLeadForm } from "./new-lead-form";
 
 export function LeadsScreen() {
-  const { repo, context, revision } = usePrototype(); void revision;
-  const router = useRouter(), membership = repo.getMembership(context), members = repo.listMemberships(context), all = repo.listLeads(context);
-  const [search,setSearch] = useState(""), [status,setStatus] = useState(""), [owner,setOwner] = useState(""), [source,setSource] = useState(""), [scope,setScope] = useState<"team"|"mine">("team"), [sort,setSort] = useState("newest"), [creating,setCreating] = useState(false);
-  const rows = useMemo(() => all.filter(lead => `${lead.firstName} ${lead.lastName} ${lead.email}`.toLowerCase().includes(search.toLowerCase()) && (!status || lead.status === status) && (!owner || (owner === "unassigned" ? isActiveUnassignedLead(lead) : lead.ownerMembershipId === owner)) && (!source || lead.source === source) && (scope === "team" || lead.ownerMembershipId === membership.id)).sort((a,b) => sort === "oldest" ? a.createdAt.localeCompare(b.createdAt) : sort === "next" ? (a.nextActionAt ?? "9999").localeCompare(b.nextActionAt ?? "9999") : b.createdAt.localeCompare(a.createdAt)), [all,search,status,owner,source,scope,sort,membership.id]);
-  const open = (id: string) => router.push(`/leads/${id}`), clear = () => { setSearch(""); setStatus(""); setOwner(""); setSource(""); setScope("team"); };
-  return <><PageTitle title="Leads" body="Own the first response, follow-up and discovery-booking journey." action={hasCapability(membership,"lead.create") ? <Button leadingIcon={<Plus/>} onClick={() => setCreating(true)}>New lead</Button> : undefined}/>
-    <div className="scope-switch"><button className={scope === "mine" ? "active" : ""} onClick={() => setScope("mine")}>My leads</button><button className={scope === "team" ? "active" : ""} onClick={() => setScope("team")}>Team leads</button></div>
-    <section className="filter-bar" aria-label="Lead filters"><SearchInput label="Search leads" placeholder="Search name or email" value={search} onChange={event => setSearch(event.target.value)}/><Select hideLabel label="Status filter" value={status} onChange={event => setStatus(event.target.value)} options={[{value:"",label:"All statuses"},...["New","Contact attempted","Contacted","Discovery booked","Nurture","Converted","Closed"].map(value => ({value,label:value}))]}/><Select hideLabel label="Owner filter" value={owner} onChange={event => setOwner(event.target.value)} options={[{value:"",label:"All owners"},{value:"unassigned",label:"Unassigned"},...members.filter(m => m.mortgageProfile.position === "Broker").map(m => ({value:m.id,label:m.displayName}))]}/><Select hideLabel label="Source filter" value={source} onChange={event => setSource(event.target.value)} options={[{value:"",label:"All sources"},...Array.from(new Set(all.map(l => l.source))).map(value => ({value,label:value}))]}/><Select hideLabel label="Sort leads" value={sort} onChange={event => setSort(event.target.value)} options={[{value:"newest",label:"Newest"},{value:"oldest",label:"Oldest"},{value:"next",label:"Next action"}]}/><Button variant="text" leadingIcon={<Filter/>} onClick={clear}>Clear</Button></section>
-    {rows.length ? <Table><thead><tr><th>Lead</th><th>Purpose</th><th>Source</th><th>Owner</th><th>Status</th><th>Next action</th><th>Age</th><th>Last activity</th></tr></thead><tbody>{rows.map(lead => <tr key={lead.id} className="ui-table-row--interactive" tabIndex={0} aria-label={`Open lead ${lead.firstName} ${lead.lastName}`} onClick={() => open(lead.id)} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); open(lead.id); } }}><td><strong>{lead.firstName} {lead.lastName}</strong><small>{lead.email}</small></td><td>{lead.loanPurpose}</td><td>{lead.source}</td><td>{membershipName(members,lead.ownerMembershipId)}</td><td><Status tone={lead.status === "New" ? "warning" : lead.status === "Converted" ? "success" : "neutral"}>{lead.status}</Status></td><td>{lead.nextActionAt ? date(lead.nextActionAt) : "—"}</td><td><Badge>{Math.max(0,Math.floor((Date.parse("2026-11-14T12:00:00+11:00")-Date.parse(lead.createdAt))/86400000))}d</Badge></td><td>{date(lead.updatedAt)}</td></tr>)}</tbody></Table> : <section className="surface"><EmptyState title="No leads match these filters" body="Clear filters or switch between your leads and the team view."/></section>}
-    {creating && <NewLeadForm onClose={() => setCreating(false)}/>}</>;
+  const { repo, context, now, revision } = usePrototype(); void revision;
+  const membership = repo.getMembership(context);
+  return <LeadsListView leads={repo.listLeads(context)} memberships={repo.listMemberships(context)} activities={repo.snapshot().activities.filter(item => item.organisationId === context.organisationId)} tasks={repo.listTasks(context)} now={now()} canCreate={hasCapability(membership, "lead.create")} renderCreate={close => <NewLeadForm onClose={close}/>}/>;
 }
-const date = (value: string) => new Intl.DateTimeFormat("en-AU", { day:"numeric", month:"short", hour:"numeric", minute:"2-digit" }).format(new Date(value));
