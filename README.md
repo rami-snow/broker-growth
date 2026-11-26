@@ -175,3 +175,13 @@ selectable; inactive partners remain visible wherever they are historically
 linked. Campaign planning remains fixture-only, and messaging, delivery,
 calendar, CRM, document and construction/trades integrations remain unavailable.
 Fixture mode remains isolated.
+
+## Milestone 4F.2 — UI alignment
+
+The nine desktop screens follow the Figma file "Broker Growth Desk – AI-native redesign" (page **Screens**). Both runtimes share one sidebar, top bar and Cmd+K command bar, and each screen renders through a shared presentational view fed by the runtime's existing repositories:
+
+- Today: greeting, four metrics, Needs action with manual buttons, priorities sorted by response deadline then due date, recent activity from the audit log, next discovery call and fixed-rate expiries.
+- Leads: tabs, stage/owner/source/purpose filters, search and response-due sorting. The response clock runs while a lead is New and stops at the first logged contact attempt (target 1 hour).
+- Lead detail, Clients, Partners, Campaigns (review panel, "Not scheduled"), Settings (CSV-only data sources) and the command bar (record search, create actions, G-then-key shortcuts; no natural-language questions).
+
+Phase 1 is desktop only. Nothing is sent, scheduled or exported. Supabase-mode Settings, Reports and Campaigns remain unavailable until their milestones.

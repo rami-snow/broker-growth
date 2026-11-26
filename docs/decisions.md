@@ -141,3 +141,7 @@ The fixture campaign engine proves versioning, audience snapshots, conservative 
 ## Decisions before production
 
 Production Supabase project configuration, invitation operations, MFA/recovery policy, tenant hierarchy, CRM ownership, calendar provider, messaging channels, consent policy, audit retention, data residency, encryption, duplicate/household resolution and production reporting definitions remain open.
+
+## ADR-035 — One shell and shared screen views across runtimes
+
+Milestone 4F.2 aligns the UI to the Figma desktop screens. Fixture and Supabase modes now render the same sidebar, top bar and command bar, and each list or detail screen uses one presentational view fed by the runtime's existing repository snapshot. Runtime components keep their own permission checks, modals and command boundaries, so persistence and authorisation are unchanged. Display rules that are business rules (response clock, client retention projection, partner relationship status) live in the mortgage vertical with tests. Phase 1 is desktop only; mobile e2e checks were removed with that scope decision.

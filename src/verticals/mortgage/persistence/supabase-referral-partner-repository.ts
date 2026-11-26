@@ -1,3 +1,4 @@
+import type { ReferredLead } from "@/verticals/mortgage/referrals/relationship";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/platform/database/database.types";
 import type { TenantContext } from "@/platform/core/models";
@@ -53,6 +54,15 @@ export class SupabaseReferralPartnerRepository {
       activities:(activities.data??[]).map(row=>({id:row.id,eventType:row.event_type,summary:row.summary,occurredAt:row.occurred_at,actorMembershipId:row.actor_membership_id??undefined}))};
   }
 
+  /** Read-only lead attribution facts for partner relationship metrics. Explicit columns; RLS still applies. */
+  async referredLeads(context:TenantContext):Promise<ReferredLead[]>{
+    const details=await this.client.from("mortgage_lead_details").select("lead_id,referral_partner_id").eq("organisation_id",context.organisationId).not("referral_partner_id","is",null);
+    if(details.error)throw new Error(`Unable to load referral attribution: ${details.error.message}`);
+    const ids=(details.data??[]).map(row=>row.lead_id);if(!ids.length)return[];
+    const leads=await this.client.from("leads").select("id,created_at,lifecycle_status").eq("organisation_id",context.organisationId).in("id",ids);
+    if(leads.error)throw new Error(`Unable to load referral attribution: ${leads.error.message}`);
+    return (details.data??[]).flatMap(row=>{const lead=leads.data?.find(item=>item.id===row.lead_id);return lead&&row.referral_partner_id?[{referralPartnerId:row.referral_partner_id,createdAt:lead.created_at,status:lead.lifecycle_status}]:[];});
+  }
   async activeOptions(context:TenantContext){const{data,error}=await this.client.from("mortgage_referral_partners").select("id,name,organisation_name").eq("organisation_id",context.organisationId).eq("status","Active").order("name_normalized").order("id");if(error)throw new Error(`Unable to load referral options: ${error.message}`);return(data??[]).map(row=>({id:row.id,name:row.name,organisationName:row.organisation_name??undefined}));}
   async linkedOption(context:TenantContext,id?:string){if(!id)return undefined;const{data,error}=await this.client.from("mortgage_referral_partners").select("id,name,organisation_name,status").eq("organisation_id",context.organisationId).eq("id",id).maybeSingle();if(error)throw new Error(`Unable to load linked referral partner: ${error.message}`);return data?{id:data.id,name:data.name,organisationName:data.organisation_name??undefined,status:data.status}:undefined;}
   async previewDuplicates(context:TenantContext,input:Pick<ReferralPartnerMutationInput,"name"|"organisationName"|"email">):Promise<ReferralDuplicateMatch[]>{const{data,error}=await this.client.rpc("preview_mortgage_referral_partner_duplicates" as never,{p_organisation_id:context.organisationId,p_name:input.name,p_organisation_name:input.organisationName??null,p_email:input.email??null} as never);if(error)throw referralError(error.message);return((data??[]) as unknown as DuplicateRow[]).map(row=>({id:row.referral_partner_id,name:row.partner_name,organisationName:row.organisation_name??undefined,email:row.email??undefined,status:row.status,reasons:row.reasons}));}

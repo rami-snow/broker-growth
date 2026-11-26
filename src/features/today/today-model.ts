@@ -77,10 +77,10 @@ export function buildToday(input: TodayInputs) {
   }
   for (const review of annualDue.sort((a, b) => a.triggerDate.localeCompare(b.triggerDate))) {
     const overdue = review.status === "Overdue";
-    needsAction.push({ id: `review-${review.id}`, icon: "mail", title: `Annual review due: ${review.householdName}`, badge: { label: `Review due ${formatDayMonth(review.triggerDate)}`, tone: overdue ? "danger" : "warning" }, text: `Annual review ${overdue ? "was" : "is"} due ${formatDayMonth(review.triggerDate)}. ${review.ownerName ? `Assigned to ${review.ownerName}.` : "No owner assigned."}`, actions: [{ label: "Add note", href: `/client-book/${review.householdId}?action=note` }, { label: "Open client", href: `/client-book/${review.householdId}`, primary: true }] });
+    needsAction.push({ id: `review-${review.id}`, icon: "mail", title: `Annual review due: ${review.householdName}`, badge: { label: `Review due ${formatDayMonth(review.triggerDate)}`, tone: overdue ? "danger" : "warning" }, text: `Annual review ${overdue ? "was" : "is"} due ${formatDayMonth(review.triggerDate)}. ${review.ownerName ? `Assigned to ${review.ownerName}.` : "No owner assigned."}`, actions: [{ label: "Open client", href: `/client-book/${review.householdId}`, primary: true }] });
   }
   for (const review of fixed.filter(item => (item.status === "Due" || item.status === "Overdue"))) {
-    needsAction.push({ id: `fixed-${review.id}`, icon: "calendar", title: `Fixed-rate expiry: ${review.householdName}`, badge: { label: `Expires ${formatDayMonth(review.triggerDate)}`, tone: review.status === "Overdue" ? "danger" : "warning" }, text: `Fixed rate ends ${formatDayMonth(review.triggerDate)}. ${review.ownerName ? `Assigned to ${review.ownerName}, no` : "No owner and no"} review call booked yet.`, actions: [{ label: "Add note", href: `/client-book/${review.householdId}?action=note` }, { label: "Open household", href: `/client-book/${review.householdId}`, primary: true }] });
+    needsAction.push({ id: `fixed-${review.id}`, icon: "calendar", title: `Fixed-rate expiry: ${review.householdName}`, badge: { label: `Expires ${formatDayMonth(review.triggerDate)}`, tone: review.status === "Overdue" ? "danger" : "warning" }, text: `Fixed rate ends ${formatDayMonth(review.triggerDate)}. ${review.ownerName ? `Assigned to ${review.ownerName}, no` : "No owner and no"} review call booked yet.`, actions: [{ label: "Open household", href: `/client-book/${review.householdId}`, primary: true }] });
   }
 
   const priorities: PriorityItem[] = [];

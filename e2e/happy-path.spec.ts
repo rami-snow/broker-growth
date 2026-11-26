@@ -7,7 +7,7 @@ test("unassigned lead moves through contact, task and discovery booking", async 
   await page.getByRole("button",{name:"Assign owner"}).click();
   await page.locator('.modal select[name="owner"]').selectOption("mem_h_broker1");
   await page.getByRole("button",{name:"Save"}).click();
-  await page.getByRole("button",{name:"Record contact attempt"}).click();
+  await page.getByRole("button",{name:"Log contact attempt"}).click();
   await page.getByLabel("Channel").selectOption("Phone");
   await page.getByLabel("Outcome").selectOption("Left message");
   await page.getByLabel("Note (optional)").fill("Called and left a voicemail externally");
@@ -15,8 +15,8 @@ test("unassigned lead moves through contact, task and discovery booking", async 
   await page.getByRole("button",{name:"Save"}).click();
   await expect(page.getByText("Left message")).toBeVisible();
   await expect(page.getByText(/Next action set for/)).toBeVisible();
-  await page.getByRole("button",{name:"Change status"}).click();
-  await page.getByLabel("New status").selectOption("Contacted");
+  await page.getByRole("button",{name:"Change stage"}).click();
+  await page.getByLabel("New stage").selectOption("Contacted");
   await page.getByRole("button",{name:"Save"}).click();
   await page.getByRole("button",{name:"Create follow-up task"}).click();
   await page.getByLabel("Task title").fill("Send discovery preparation note");
@@ -27,33 +27,14 @@ test("unassigned lead moves through contact, task and discovery booking", async 
   await page.getByRole("button",{name:"Book appointment"}).click();
   await expect(page.getByText("Discovery booked",{exact:true}).first()).toBeVisible();
   await expect(page.getByText(/Contact attempt recorded/)).toBeVisible();
-  await expect(page.getByText(/Follow-up task created/)).toBeVisible();
+  await expect(page.getByText(/Follow-up task created/).first()).toBeVisible();
   await page.getByRole("link",{name:"Today"}).click();
-  await expect(page.getByText("Discovery booked").locator("..").getByText("2")).toBeVisible();
+  await expect(page.getByRole("heading",{name:"Needs action"})).toBeVisible();
+  await expect(page.getByText("Call Mila Hart")).toHaveCount(0);
   await page.getByRole("link",{name:"Leads",exact:true}).click();
   await page.getByRole("row",{name:/Open lead Mila Hart/}).click();
   await page.getByLabel("Brokerage").selectOption("brk_ranges");
   await expect(page.getByRole("heading",{name:"Lead unavailable"})).toBeVisible();
-});
-
-test("mobile navigation exposes the real routes", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/today");
-  await expect(page.getByRole("button",{name:"Open navigation"})).toBeVisible();
-  await page.getByRole("button",{name:"Open navigation"}).click();
-  await page.getByRole("link",{name:"Leads",exact:true}).click();
-  await expect(page.getByRole("heading",{name:"Leads",exact:true})).toBeVisible();
-});
-
-test("mobile lead detail prioritises one action panel above record details", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/leads/lead_001");
-  const actionBox = await page.getByRole("heading",{name:"Actions"}).boundingBox();
-  const detailBox = await page.getByRole("heading",{name:"Contact and enquiry"}).boundingBox();
-  expect(actionBox).not.toBeNull();
-  expect(detailBox).not.toBeNull();
-  expect(actionBox!.y).toBeLessThan(detailBox!.y);
-  await expect(page.getByRole("button",{name:"Record contact attempt"})).toHaveCount(1);
 });
 
 test("referral partner directory and detail remain usable on desktop", async ({ page }) => {
@@ -70,23 +51,10 @@ test("referral partner directory and detail remain usable on desktop", async ({ 
   expect(browserProblems).toEqual([]);
 });
 
-test("referral partner directory and detail remain usable at 390 by 844", async ({ page }) => {
-  const browserProblems:string[]=[];
-  page.on("console",message=>{if(message.type()==="warning"||message.type()==="error")browserProblems.push(`${message.type()}: ${message.text()}`);});
-  page.on("pageerror",error=>browserProblems.push(`pageerror: ${error.message}`));
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/referral-partners");
-  await expect(page.getByRole("heading",{name:"Referral partners",exact:true})).toBeVisible();
-  await page.getByRole("link",{name:"Casey Rowan"}).click();
-  await expect(page.getByRole("heading",{name:"Casey Rowan",exact:true})).toBeVisible();
-  await expect(page.getByRole("heading",{name:"Partner details"})).toBeVisible();
-  expect(browserProblems).toEqual([]);
-});
-
 test("closed lead offers reopen without a generic status action", async ({ page }) => {
   await page.goto("/leads/lead_007");
   await expect(page.getByRole("button",{name:"Reopen lead"})).toBeVisible();
-  await expect(page.getByRole("button",{name:"Change status"})).toHaveCount(0);
+  await expect(page.getByRole("button",{name:"Change stage"})).toHaveCount(0);
 });
 
 test("qualified lead converts atomically into a joint client and review opportunity", async ({ page }) => {
@@ -123,10 +91,10 @@ test("qualified lead converts atomically into a joint client and review opportun
   await expect(reviewRow.getByText("Due")).toBeVisible();
 
   await page.getByRole("link",{name:"Today"}).click();
-  await expect(page.getByRole("heading",{name:"Client opportunities"})).toBeVisible();
-  await expect(page.getByRole("link",{name:/March household Annual review/}).first()).toBeVisible();
+  await expect(page.getByRole("heading",{name:"Today’s priorities"})).toBeVisible();
+  await expect(page.getByRole("link",{name:/March household annual review/}).first()).toBeVisible();
 
-  await page.getByRole("link",{name:"Client Book",exact:true}).click();
+  await page.getByRole("link",{name:"Clients",exact:true}).click();
   await page.getByRole("row",{name:/Open household March household/}).first().click();
   await page.getByLabel("Brokerage").selectOption("brk_ranges");
   await expect(page.getByRole("heading",{name:"Household unavailable"})).toBeVisible();
@@ -187,13 +155,32 @@ test("annual review campaign is previewed and approved without delivery", async 
   expect(browserProblems).toEqual([]);
 });
 
-test("mobile campaign workflow keeps the action panel usable", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/campaigns/campaign_001");
-  const actions=await page.getByRole("heading",{name:"Plan actions"}).boundingBox();
-  const content=await page.getByRole("heading",{name:"Content plan"}).boundingBox();
-  expect(actions).not.toBeNull();
-  expect(content).not.toBeNull();
-  expect(actions!.y).toBeLessThan(content!.y);
-  await expect(page.getByRole("button",{name:"Save and preview"})).toHaveCount(1);
+
+test("command bar searches records and offers create and go-to actions", async ({ page }) => {
+  await page.goto("/today");
+  await page.keyboard.press("Control+k");
+  const dialog=page.getByRole("dialog",{name:"Command bar"});
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("combobox").fill("Mila");
+  await expect(dialog.getByRole("option",{name:/Mila Hart/})).toBeVisible();
+  await expect(dialog.getByRole("option",{name:"Create a new lead"})).toBeVisible();
+  await expect(dialog.getByRole("option",{name:/Reports G then R/})).toBeVisible();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/leads\/lead_001$/);
+  await expect(page.getByRole("heading",{name:"Mila Hart",level:1})).toBeVisible();
+  await page.keyboard.press("g"); await page.keyboard.press("c");
+  await expect(page).toHaveURL(/\/client-book$/);
+});
+
+test("campaign review panel approves a plan without scheduling anything", async ({ page }) => {
+  await page.goto("/campaigns");
+  const panel=page.getByRole("complementary",{name:"Campaign review"});
+  await expect(panel.getByText("Not scheduled")).toBeVisible();
+  await panel.getByRole("button",{name:"Approve plan"}).click();
+  // The reviewed-snapshot handshake may pause once if the seeded audience is stale; approving again approves the re-presented snapshot.
+  const approved=panel.getByText(/Plan approved\. Nothing was sent or scheduled\./);
+  if (!(await approved.isVisible())) { await expect(panel.getByText(/audience changed/i)).toBeVisible(); await panel.getByRole("button",{name:"Approve plan"}).click(); }
+  await expect(approved).toBeVisible();
+  await expect(page.getByRole("row",{name:/Fixed expiry SMS review/}).getByText("Approved")).toBeVisible();
+  await expect(page.getByRole("button",{name:/send|schedule|queue|export/i})).toHaveCount(0);
 });

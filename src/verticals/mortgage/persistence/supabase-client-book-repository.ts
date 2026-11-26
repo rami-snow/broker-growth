@@ -1,3 +1,4 @@
+import type { ClientLoanInput, ClientOpportunityInput } from "@/verticals/mortgage/households/client-list";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/platform/database/database.types";
 import type { TenantContext } from "@/platform/core/models";
@@ -124,6 +125,25 @@ export class SupabaseClientBookRepository {
     const result = object(data as Json);
     if (typeof result.householdId !== "string" || typeof result.leadId !== "string" || typeof result.version !== "number") throw new Error("The conversion returned an invalid result.");
     return { householdId:result.householdId, leadId:result.leadId, version:result.version };
+  }
+
+  /** Read-only retention columns for the Clients table and summary cards. Explicit columns; RLS still applies. */
+  async clientRetention(context:TenantContext,householdIds?:string[]):Promise<{loans:ClientLoanInput[];opportunities:ClientOpportunityInput[];members:Array<{householdId:string;contactId:string}>;households:Array<{id:string;status:string}>}>{
+    if(householdIds&&!householdIds.length)return{loans:[],opportunities:[],members:[],households:[]};
+    const scoped=<T extends {in:(column:string,values:string[])=>T}>(query:T,column:string)=>householdIds?query.in(column,householdIds):query;
+    const [loans,opportunities,members,households]=await Promise.all([
+      scoped(this.client.from("mortgage_minimal_loan_records").select("household_id,lender_name,loan_purpose,fixed_rate_expiry_date,status").eq("organisation_id",context.organisationId),"household_id"),
+      scoped(this.client.from("opportunities").select("subject_id,opportunity_type,trigger_date,lifecycle_status").eq("organisation_id",context.organisationId).eq("subject_type","mortgage.household"),"subject_id"),
+      householdIds?Promise.resolve({data:[],error:null}):this.client.from("mortgage_household_members").select("household_id,contact_id").eq("organisation_id",context.organisationId),
+      householdIds?Promise.resolve({data:[],error:null}):this.client.from("mortgage_households").select("id,status").eq("organisation_id",context.organisationId),
+    ]);
+    fail([loans.error,opportunities.error,members.error,households.error],"Unable to load client retention details");
+    return {
+      loans:(loans.data??[]).map(row=>({householdId:row.household_id,lenderName:row.lender_name,loanPurpose:row.loan_purpose,fixedRateExpiryDate:row.fixed_rate_expiry_date??undefined,status:row.status})),
+      opportunities:(opportunities.data??[]).map(row=>({householdId:row.subject_id,type:row.opportunity_type,triggerDate:row.trigger_date,status:row.lifecycle_status})),
+      members:((members.data??[]) as Array<{household_id:string;contact_id:string}>).map(row=>({householdId:row.household_id,contactId:row.contact_id})),
+      households:((households.data??[]) as Array<{id:string;status:string}>),
+    };
   }
 
   async retentionToday(context:TenantContext):Promise<RetentionTodaySnapshot>{

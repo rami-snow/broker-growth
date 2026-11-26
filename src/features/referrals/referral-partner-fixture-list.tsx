@@ -1,6 +1,23 @@
 "use client";
-import Link from "next/link";
+import { useState } from "react";
 import { PageTitle } from "@/components/page-title";
-import { Badge,Table } from "@/components/ui";
+import { SearchInput, Select } from "@/components/ui";
 import { usePrototype } from "@/components/prototype-provider";
-export function ReferralPartnerFixtureList(){const{repo,context}=usePrototype(),state=repo.snapshot(),actor=repo.getMembership(context),rows=state.referralPartners.filter(item=>item.organisationId===context.organisationId);if(!actor.capabilities.includes("mortgage.referral.view"))return <section className="surface inaccessible"><h1>Referral partners unavailable</h1></section>;return <><PageTitle title="Referral partners" body="Fictional fixture relationship records. Persistent maintenance is available in Supabase mode."/><section className="surface"><Table><thead><tr><th>Partner</th><th>Type</th><th>Status</th></tr></thead><tbody>{rows.map(row=><tr key={row.id}><td><Link href={`/referral-partners/${row.id}`}><strong>{row.name}</strong></Link><small>{row.organisationName}</small></td><td>{row.type}</td><td><Badge tone={row.status==="Active"?"success":"neutral"}>{row.status}</Badge></td></tr>)}</tbody></Table></section></>}
+import { mortgageReferralPartnerTypes } from "@/verticals/mortgage/referrals/models";
+import { PartnersTableView, relationshipOptions } from "./partners-table-view";
+
+export function ReferralPartnerFixtureList() {
+  const { repo, context, now, revision } = usePrototype(); void revision;
+  const [search, setSearch] = useState(""), [type, setType] = useState(""), [relationship, setRelationship] = useState("");
+  const state = repo.snapshot(), actor = repo.getMembership(context);
+  if (!actor.capabilities.includes("mortgage.referral.view")) return <section className="surface inaccessible"><h1>Referral partners unavailable</h1></section>;
+  const all = state.referralPartners.filter(item => item.organisationId === context.organisationId);
+  const members = repo.listMemberships(context);
+  const partners = all.filter(item => `${item.name} ${item.organisationName ?? ""} ${item.email ?? ""}`.toLowerCase().includes(search.toLowerCase()) && (!type || item.type === type)).map(item => ({ ...item, ownerName: members.find(member => member.id === item.ownerMembershipId)?.displayName }));
+  const referred = repo.listLeads(context).flatMap(lead => lead.referralPartnerId ? [{ referralPartnerId: lead.referralPartnerId, createdAt: lead.createdAt, status: lead.status }] : []);
+  return <><PageTitle title="Referral partners"/>
+    <PartnersTableView partners={partners} referredLeads={referred} totalPartners={all.length} now={now()} relationshipFilter={relationship || undefined}
+      filters={<section className="filter-bar" aria-label="Partner filters"><SearchInput label="Search partners" placeholder="Search partners" value={search} onChange={event => setSearch(event.target.value)}/><Select hideLabel label="Partner type filter" value={type} onChange={event => setType(event.target.value)} options={[{ value: "", label: "All types" }, ...mortgageReferralPartnerTypes.map(value => ({ value, label: value }))]}/><Select hideLabel label="Relationship filter" value={relationship} onChange={event => setRelationship(event.target.value)} options={[{ value: "", label: "All health" }, ...relationshipOptions.map(value => ({ value, label: value }))]}/></section>}/>
+    <p className="legal-note">Fixture records. Persistent partner maintenance is available in Supabase mode. Attribution is an operational record, not proof of causation, commission or revenue.</p>
+  </>;
+}

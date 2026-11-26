@@ -39,7 +39,7 @@ export function Sidebar({ capabilities, brokerageName, brokerageSwitcher, leadsB
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
   const renderItem = (item: NavItem) => <Link key={item.href} href={item.href} className="sidebar-nav__item" aria-current={isActive(item.href) ? "page" : undefined}>
     <item.icon aria-hidden/><span>{item.label}</span>
-    {item.href === "/leads" && leadsBadge ? <span className="badge badge-info sidebar-nav__badge" aria-label={`${leadsBadge} leads need a first response`}>{leadsBadge}</span> : null}
+    {item.href === "/leads" && leadsBadge ? <span className="badge badge-info sidebar-nav__badge" aria-hidden title={`${leadsBadge} leads need a first response`}>{leadsBadge}</span> : null}
   </Link>;
   return <aside className="sidebar" aria-label="Workspace">
     <div className="sidebar__product"><span className="sidebar__mark" aria-hidden><BarChart3/></span><strong>Broker Growth Desk</strong></div>

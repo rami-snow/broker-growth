@@ -20,12 +20,12 @@ const snapshot:ClientBookListSnapshot={
 describe("persistent Client Book creation UI",()=>{
   it("hides New client without the exact creation capability",()=>{
     render(<PersistentClientBookScreen snapshot={snapshot} query={{}} capabilities={[]} actorMembershipId="member-a"/>);
-    expect(screen.queryByRole("button",{name:"New client"})).not.toBeInTheDocument();
+    expect(screen.queryByRole("button",{name:"Add client"})).not.toBeInTheDocument();
   });
 
   it("opens an accessible duplicate-first workflow without inferring consent",()=>{
     render(<PersistentClientBookScreen snapshot={snapshot} query={{}} capabilities={["mortgage.household.create","contact.view"]} actorMembershipId="member-a"/>);
-    fireEvent.click(screen.getByRole("button",{name:"New client"}));
+    fireEvent.click(screen.getByRole("button",{name:"Add client"}));
     expect(screen.getByRole("dialog",{name:"New client household"})).toBeVisible();
     expect(screen.getByLabelText("Active Broker owner")).toHaveValue("member-a");
     expect(screen.getByLabelText("Referral partner (optional)")).toBeVisible();
@@ -36,7 +36,7 @@ describe("persistent Client Book creation UI",()=>{
 
   it("supports selecting existing primary and joint contacts",()=>{
     render(<PersistentClientBookScreen snapshot={snapshot} query={{}} capabilities={["mortgage.household.create","contact.view"]} actorMembershipId="member-a"/>);
-    fireEvent.click(screen.getByRole("button",{name:"New client"}));
+    fireEvent.click(screen.getByRole("button",{name:"Add client"}));
     fireEvent.change(screen.getByLabelText("Primary contact source"),{target:{value:"existing"}});
     expect(screen.getByLabelText("Search existing primary contact")).toBeVisible();
     fireEvent.change(screen.getByLabelText("Joint member"),{target:{value:"existing"}});
@@ -47,7 +47,7 @@ describe("persistent Client Book creation UI",()=>{
   it("limits a non-assigning Broker to self ownership and hides contact lookup without contact.view",()=>{
     const twoBrokers={...snapshot,brokers:[...snapshot.brokers,{id:"member-b",displayName:"Blair Fiction"}]};
     render(<PersistentClientBookScreen snapshot={twoBrokers} query={{}} capabilities={["mortgage.household.create"]} actorMembershipId="member-a"/>);
-    fireEvent.click(screen.getByRole("button",{name:"New client"}));
+    fireEvent.click(screen.getByRole("button",{name:"Add client"}));
     expect(screen.getByLabelText("Active Broker owner")).toHaveValue("member-a");
     expect(screen.queryByRole("option",{name:"Blair Fiction"})).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Primary contact source")).not.toBeInTheDocument();

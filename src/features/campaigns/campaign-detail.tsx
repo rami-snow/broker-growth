@@ -68,7 +68,7 @@ function CampaignDetailContent({ campaignId }: { campaignId: string }) {
 
   return <>
     <Link className="back-link" href="/campaigns"><ArrowLeft/>Back to Campaigns</Link>
-    <PageTitle eyebrow={`Campaign plan · Version ${version.versionNumber}`} title={campaign.name} body={`${purpose.displayName} · ${channel} · ${sources.find(item => item.key === version.audienceSourceKey)?.displayName}`} action={<Status tone={statusTone(campaign.status)}>{campaign.status}</Status>}/>
+    <PageTitle breadcrumb={{href:"/campaigns",label:"Campaigns"}} eyebrow={`Campaign plan · Version ${version.versionNumber}`} title={campaign.name} body={`${purpose.displayName} · ${channel} · ${sources.find(item => item.key === version.audienceSourceKey)?.displayName}`} action={<Status tone={statusTone(campaign.status)}>{campaign.status}</Status>}/>
     <div className="prototype-warning"><strong>No message will be sent</strong><span>Approval freezes this plan and the current eligibility snapshot only. It does not send, schedule, queue or export communications.</span></div>
     {latest?.changedSincePrevious && <div className="campaign-change-alert" role="status"><strong>Audience changed — approval is paused.</strong><span>Review the current {latest.eligibleCount} eligible and {latest.excludedCount} excluded recipients, then approve this revised snapshot explicitly.</span>{latest.changesSincePrevious?.length ? <ul>{latest.changesSincePrevious.map(change => <li key={`${change.type}-${change.candidateKey}-${change.contactId}`}>{change.displaySummary}</li>)}</ul> : null}</div>}
     <div className="campaign-layout">

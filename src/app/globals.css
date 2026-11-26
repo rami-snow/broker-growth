@@ -333,3 +333,4 @@ tr.is-selected td{background:var(--color-bg-muted)}
 .migration-icon{width:40px;height:40px;display:grid;place-items:center;margin-bottom:16px;border-radius:var(--radius-full);background:var(--color-success-subtle);color:var(--color-success)}
 .migration-icon svg{width:20px}
 .next-call{display:flex;flex-direction:column;gap:8px}.next-call h2,.next-call p{margin:0}
+p.legal-note{margin:12px 0 0}
