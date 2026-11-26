@@ -33,3 +33,14 @@ export function matchRecords(records: readonly CommandRecord[], query: string, l
     .sort((a, b) => Number(!a.title.toLowerCase().startsWith(tokens[0]!)) - Number(!b.title.toLowerCase().startsWith(tokens[0]!)) || a.title.localeCompare(b.title))
     .slice(0, limit);
 }
+
+/** Results are tied to the query that produced them, so stale results are never shown for a newer query. */
+export interface CommandSearchResult { query: string; records: CommandRecord[] }
+export const recordsFor = (query: string, results: CommandSearchResult | null) => query.trim().length >= 2 && results?.query === query ? results.records : [];
+
+/** "idle" below two characters; "searching" until results for this exact query arrive; then "results" or "empty". */
+export function commandSearchStatus(query: string, results: CommandSearchResult | null): "idle" | "searching" | "results" | "empty" {
+  if (query.trim().length < 2) return "idle";
+  if (results?.query !== query) return "searching";
+  return results.records.length ? "results" : "empty";
+}

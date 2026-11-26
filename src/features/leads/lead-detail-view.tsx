@@ -20,7 +20,8 @@ export interface LeadDetailPermissions { canUpdate: boolean; canAssign: boolean;
 const steps: MortgageLeadStatus[] = ["New", "Contact attempted", "Contacted", "Discovery booked", "Converted"];
 const consentLabel: Record<string, { label: string; tone: BadgeTone }> = { Recorded: { label: "Recorded", tone: "success" }, "Not recorded": { label: "Not recorded", tone: "warning" }, "Opted out": { label: "Opted out", tone: "danger" } };
 const eventIcon = (type: string) => type === "contact.attempted" ? Phone : type === "note.added" ? StickyNote : type.startsWith("lead.assigned") || type === "lead.claimed" ? User : type === "appointment.created" ? CalendarDays : type === "task.created" || type === "lead.next_action_changed" ? Clock : type === "lead.status_changed" || type === "lead.converted" ? ArrowRight : type === "lead.created" ? FileText : Mail;
-const fullDate = (value: string, now: Date) => sydneyDay(value) === sydneyDay(now) ? formatTime(value) : `${formatDayMonth(value)}, ${formatTime(value)}`;
+/** Always date and time, e.g. "14 Nov, 8:30 am", in the brokerage time zone. */
+const fullDate = (value: string) => `${formatDayMonth(value)}, ${formatTime(value)}`;
 
 /** Lead detail (Figma frame 03). Runtimes supply permissions, modals and side-effect handlers. */
 export function LeadDetailView({ lead, memberships, tasks, appointments, activities, now, permissions, onAction, onAddNote, claimControl, reopenControl, workload, legalNote }: {
@@ -54,7 +55,7 @@ export function LeadDetailView({ lead, memberships, tasks, appointments, activit
       <ol className="stepper" aria-label="Lead stage">{steps.map((step, index) => <li key={step} className={index < stepIndex ? "done" : index === stepIndex ? "current" : ""} aria-current={index === stepIndex ? "step" : undefined}>{step}</li>)}</ol>
       {stepIndex < 0 && <p className="stepper-note">This lead is in {lead.status}. {lead.status === "Closed" ? "Reopen it to continue." : "Change stage when the client is ready."}</p>}
       <section className="enquiry" aria-labelledby="enquiry-heading">
-        <header><h2 id="enquiry-heading">Enquiry</h2><small>Received {fullDate(lead.createdAt, now)}</small></header>
+        <header><h2 id="enquiry-heading">Enquiry</h2><small>Received {fullDate(lead.createdAt)}</small></header>
         <ul>
           <li>{lead.loanPurpose} enquiry from {lead.source || "an unknown source"}. Timeframe: {lead.timeframe.toLowerCase()}. Prefers {lead.preferredContactMethod.toLowerCase()}.</li>
           <li>{state.kind === "awaiting" ? "No first response recorded yet. The target is within 1 hour." : state.kind === "responded" ? `First contact attempt logged ${formatDuration(state.minutes, true)} after the enquiry${state.withinTarget ? ", within the 1 hour target" : ""}.` : "No contact attempt was logged for this lead."}</li>
@@ -75,7 +76,7 @@ export function LeadDetailView({ lead, memberships, tasks, appointments, activit
         </div>}
       </section>
       <h2 className="section-title" id="activity-heading">Activity</h2>
-      <div className="timeline-list" aria-labelledby="activity-heading">{history.map(event => { const Icon = eventIcon(event.type); const actor = member(event.actorMembershipId); return <div key={event.id} className="timeline-item"><span className="timeline-item__icon" aria-hidden><Icon/></span><div className="timeline-item__body"><strong>{event.summary}</strong>{event.contactChannel && event.contactOutcome && <span><b>{event.contactChannel}</b> · {event.contactOutcome}</span>}{event.note && <span>{event.note}</span>}{actor && <span>{actor}</span>}</div><time dateTime={event.occurredAt}>{fullDate(event.occurredAt, now)}</time></div>; })}{!history.length && <p className="muted">No activity yet.</p>}</div>
+      <div className="timeline-list" aria-labelledby="activity-heading">{history.map(event => { const Icon = eventIcon(event.type); const actor = member(event.actorMembershipId); return <div key={event.id} className="timeline-item"><span className="timeline-item__icon" aria-hidden><Icon/></span><div className="timeline-item__body"><strong>{event.summary}</strong>{event.contactChannel && event.contactOutcome && <span><b>{event.contactChannel}</b> · {event.contactOutcome}</span>}{event.note && <span>{event.note}</span>}{actor && <span>{actor}</span>}</div><time dateTime={event.occurredAt}>{fullDate(event.occurredAt)}</time></div>; })}{!history.length && <p className="muted">No activity yet.</p>}</div>
       {permissions.canUpdate && <div className="composer"><label className="sr-only" htmlFor="lead-note">Add a note about {lead.firstName}</label><textarea id="lead-note" placeholder={`Add a note about ${lead.firstName}…`} value={note} onChange={event => setNote(event.target.value)}/>{noteError && <p className="form-error" role="alert">{noteError}</p>}<Button size="small" onClick={submitNote} disabled={saving}>{saving ? "Saving…" : "Add note"}</Button></div>}
     </div>
     <aside className="split-page__aside" aria-label="Lead details">
@@ -89,13 +90,13 @@ export function LeadDetailView({ lead, memberships, tasks, appointments, activit
         <dt>Phone</dt><dd>{lead.phone}</dd>
         <dt>Email</dt><dd>{lead.email}</dd>
         <dt>Prefers</dt><dd>{lead.preferredContactMethod}</dd>
-        <dt>Created</dt><dd>{fullDate(lead.createdAt, now)}</dd>
+        <dt>Created</dt><dd>{fullDate(lead.createdAt)}</dd>
       </dl></section>
       <section className="panel-section" aria-labelledby="consent-heading"><h2 id="consent-heading">Consent</h2><dl className="kv">
         <dt>Email</dt><dd><Badge tone={consent("email").tone}>{consent("email").label}</Badge></dd>
         <dt>SMS</dt><dd><Badge tone={consent("sms").tone}>{consent("sms").label}</Badge></dd>
         <dt>Phone</dt><dd><Badge tone={consent("phone").tone}>{consent("phone").label}</Badge></dd>
-      </dl><small>Source: {lead.consentSummary.source}, {fullDate(lead.consentSummary.recordedAt, now)}</small><p className="legal-note">{legalNote}</p></section>
+      </dl><small>Source: {lead.consentSummary.source}, {fullDate(lead.consentSummary.recordedAt)}</small><p className="legal-note">{legalNote}</p></section>
       <section className="owner-panel" aria-labelledby="owner-heading"><h2 id="owner-heading">Owner</h2><span>{owner ? `${owner} owns this lead.` : "No one owns this lead yet."}{workload?.length ? ` Open leads right now: ${workload.map(item => `${item.name} ${item.open}`).join(", ")}.` : ""}</span>{permissions.canAssign && active && <Button size="small" onClick={() => onAction("assign")}>Assign owner</Button>}{claimControl}</section>
       <section className="panel-section" aria-labelledby="lead-actions-heading"><h2 id="lead-actions-heading">Lead actions</h2><div className="panel-actions">
         {permissions.canBook && <Button variant="secondary" onClick={() => onAction("appointment")}>Book discovery appointment</Button>}

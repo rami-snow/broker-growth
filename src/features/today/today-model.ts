@@ -22,7 +22,9 @@ export interface TodayInputs {
 }
 export type TodayIcon = "phone" | "user" | "mail" | "calendar" | "clock" | "video";
 export interface TodayAction { label: string; href: string; primary?: boolean }
-export interface NeedsActionItem { id: string; icon: TodayIcon; title: string; badge: { label: string; tone: BadgeTone }; text: string; actions: TodayAction[] }
+export interface NeedsActionItem { id: string; kind: "first-response" | "unassigned" | "annual-review" | "fixed-rate"; icon: TodayIcon; title: string; badge: { label: string; tone: BadgeTone }; text: string; actions: TodayAction[]; responseDeadline?: number; dueAt: number }
+/** Today shows the most urgent items only; the card states how many more there are. */
+export const NEEDS_ACTION_LIMIT = 5;
 export interface PriorityItem { id: string; icon: TodayIcon; title: string; detail: string; ownerName?: string; status: { label: string; tone: BadgeTone }; href: string; responseDeadline?: number; dueAt: number }
 
 const fmt = (options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("en-AU", { timeZone: TIME_ZONE, ...options });
@@ -67,20 +69,20 @@ export function buildToday(input: TodayInputs) {
   for (const { lead, state } of awaiting) {
     if (state.kind !== "awaiting") continue;
     const waiting = Math.round((now.getTime() - Date.parse(lead.createdAt)) / 60000), overdue = state.minutesUntilDue < 0, owner = member(lead.ownerMembershipId);
-    needsAction.push({ id: `respond-${lead.id}`, icon: "phone", title: `Call ${fullName(lead)}`, badge: overdue ? { label: `${formatDuration(waiting)} waiting`, tone: "danger" } : { label: `Due in ${formatDuration(state.minutesUntilDue)}`, tone: "warning" },
+    needsAction.push({ id: `respond-${lead.id}`, kind: "first-response", responseDeadline: Date.parse(state.dueAt), dueAt: Date.parse(state.dueAt), icon: "phone", title: `Call ${fullName(lead)}`, badge: overdue ? { label: `${formatDuration(waiting)} waiting`, tone: "danger" } : { label: `Due in ${formatDuration(state.minutesUntilDue)}`, tone: "warning" },
       text: `${lead.loanPurpose} enquiry from ${lead.source}. No first response yet${owner ? `. Owned by ${owner}.` : " and no owner assigned."}`,
       actions: owner ? [{ label: "Add note", href: `/leads/${lead.id}?action=note` }, { label: "Open lead", href: `/leads/${lead.id}`, primary: true }] : [{ label: "Assign owner", href: `/leads/${lead.id}?action=assign` }, { label: "Open lead", href: `/leads/${lead.id}`, primary: true }] });
   }
   for (const lead of leads.filter(item => isActive(item) && !item.ownerMembershipId && !awaiting.some(entry => entry.lead.id === item.id))) {
     const days = Math.max(0, Math.floor((now.getTime() - Date.parse(lead.updatedAt)) / 86400000));
-    needsAction.push({ id: `assign-${lead.id}`, icon: "user", title: `Assign ${fullName(lead)}`, badge: { label: days ? `Unassigned ${days} ${days === 1 ? "day" : "days"}` : "Needs owner", tone: "warning" }, text: `${lead.loanPurpose} lead in ${lead.status}. No owner is responsible for the next step.`, actions: [{ label: "Open lead", href: `/leads/${lead.id}` }, { label: "Assign", href: `/leads/${lead.id}?action=assign`, primary: true }] });
+    needsAction.push({ id: `assign-${lead.id}`, kind: "unassigned", dueAt: Date.parse(lead.nextActionAt ?? lead.createdAt), icon: "user", title: `Assign ${fullName(lead)}`, badge: { label: days ? `Unassigned ${days} ${days === 1 ? "day" : "days"}` : "Needs owner", tone: "warning" }, text: `${lead.loanPurpose} lead in ${lead.status}. No owner is responsible for the next step.`, actions: [{ label: "Open lead", href: `/leads/${lead.id}` }, { label: "Assign", href: `/leads/${lead.id}?action=assign`, primary: true }] });
   }
   for (const review of annualDue.sort((a, b) => a.triggerDate.localeCompare(b.triggerDate))) {
     const overdue = review.status === "Overdue";
-    needsAction.push({ id: `review-${review.id}`, icon: "mail", title: `Annual review due: ${review.householdName}`, badge: { label: `Review due ${formatDayMonth(review.triggerDate)}`, tone: overdue ? "danger" : "warning" }, text: `Annual review ${overdue ? "was" : "is"} due ${formatDayMonth(review.triggerDate)}. ${review.ownerName ? `Assigned to ${review.ownerName}.` : "No owner assigned."}`, actions: [{ label: "Open client", href: `/client-book/${review.householdId}`, primary: true }] });
+    needsAction.push({ id: `review-${review.id}`, kind: "annual-review", dueAt: dateValue(review.triggerDate), icon: "mail", title: `Annual review due: ${review.householdName}`, badge: { label: `Review due ${formatDayMonth(review.triggerDate)}`, tone: overdue ? "danger" : "warning" }, text: `Annual review ${overdue ? "was" : "is"} due ${formatDayMonth(review.triggerDate)}. ${review.ownerName ? `Assigned to ${review.ownerName}.` : "No owner assigned."}`, actions: [{ label: "Open client", href: `/client-book/${review.householdId}`, primary: true }] });
   }
   for (const review of fixed.filter(item => (item.status === "Due" || item.status === "Overdue"))) {
-    needsAction.push({ id: `fixed-${review.id}`, icon: "calendar", title: `Fixed-rate expiry: ${review.householdName}`, badge: { label: `Expires ${formatDayMonth(review.triggerDate)}`, tone: review.status === "Overdue" ? "danger" : "warning" }, text: `Fixed rate ends ${formatDayMonth(review.triggerDate)}. ${review.ownerName ? `Assigned to ${review.ownerName}, no` : "No owner and no"} review call booked yet.`, actions: [{ label: "Open household", href: `/client-book/${review.householdId}`, primary: true }] });
+    needsAction.push({ id: `fixed-${review.id}`, kind: "fixed-rate", dueAt: dateValue(review.triggerDate), icon: "calendar", title: `Fixed-rate expiry: ${review.householdName}`, badge: { label: `Expires ${formatDayMonth(review.triggerDate)}`, tone: review.status === "Overdue" ? "danger" : "warning" }, text: `Fixed rate ends ${formatDayMonth(review.triggerDate)}. ${review.ownerName ? `Assigned to ${review.ownerName}, no` : "No owner and no"} review call booked yet.`, actions: [{ label: "Open household", href: `/client-book/${review.householdId}`, primary: true }] });
   }
 
   const priorities: PriorityItem[] = [];
@@ -98,11 +100,12 @@ export function buildToday(input: TodayInputs) {
     return { id: event.id, time: sydneyDay(event.occurredAt) === today ? formatTime(event.occurredAt) : formatDayMonth(event.occurredAt), text: `${subject ? `${subject}: ` : ""}${event.summary}${actor ? ` (${actor})` : ""}` };
   });
 
-  const followUps = priorities.filter(item => !item.responseDeadline && item.dueAt <= endOfDay(now)).length;
+  needsAction.sort(comparePriorities);
+  const awaitingCount = needsAction.filter(item => item.kind === "first-response").length;
   const nextCallLead = nextCall ? leadById.get(nextCall.leadId) : undefined;
   return {
     greeting: greeting(now, input.userName),
-    summary: `${fmt({ weekday: "long", day: "numeric", month: "long" }).format(now).replace(",", "")}. ${newLeads.length} new ${newLeads.length === 1 ? "lead" : "leads"} and ${followUps} ${followUps === 1 ? "follow-up" : "follow-ups"} need action today.`,
+    summary: `${fmt({ weekday: "long", day: "numeric", month: "long" }).format(now).replace(",", "")}. ${needsActionSummary(needsAction.length, awaitingCount)}`,
     metrics: {
       medianFirstResponse: median === null ? null : { label: formatDuration(median, true), overTarget: median > FIRST_RESPONSE_TARGET_MINUTES },
       newLeads: { count: newLeads.length, unassigned: newLeads.filter(lead => !lead.ownerMembershipId).length },
@@ -117,6 +120,13 @@ export function buildToday(input: TodayInputs) {
   };
 }
 
+/** Subtitle text derived from the same Needs action list as the card count, so the two cannot disagree. */
+export function needsActionSummary(total: number, awaitingFirstResponse: number) {
+  if (!total) return "Nothing needs action today.";
+  const items = `${total} ${total === 1 ? "item needs" : "items need"} action today`;
+  return awaitingFirstResponse ? `${items}, including ${awaitingFirstResponse} ${awaitingFirstResponse === 1 ? "lead" : "leads"} waiting for a first response.` : `${items}.`;
+}
+
 /** Brief §6.1: priorities sort by response deadline first, then by due date. */
 export function comparePriorities(a: Pick<PriorityItem, "responseDeadline" | "dueAt">, b: Pick<PriorityItem, "responseDeadline" | "dueAt">) {
   if (a.responseDeadline !== undefined && b.responseDeadline !== undefined) return a.responseDeadline - b.responseDeadline;
@@ -124,5 +134,4 @@ export function comparePriorities(a: Pick<PriorityItem, "responseDeadline" | "du
   if (b.responseDeadline !== undefined) return 1;
   return a.dueAt - b.dueAt;
 }
-const endOfDay = (now: Date) => Date.parse(`${sydneyDay(now).split("/").reverse().join("-")}T23:59:59+11:00`);
 export type TodayModel = ReturnType<typeof buildToday>;

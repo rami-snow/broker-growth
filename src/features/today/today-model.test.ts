@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createFixtureState } from "@/verticals/mortgage/fixtures";
-import { buildToday, comparePriorities, greeting } from "./today-model";
+import { buildToday, comparePriorities, greeting, needsActionSummary } from "./today-model";
 
 const now = new Date("2026-11-14T12:00:00+11:00");
 function model() {
@@ -46,5 +46,18 @@ describe("Today model", () => {
     const activity = model().recentActivity;
     expect(activity.length).toBeLessThanOrEqual(5);
     expect(JSON.stringify(model())).not.toMatch(/balance|interest rate|loan amount|\$\d/i);
+  });
+  it("derives the subtitle and the Needs action count from the same list, most urgent first", () => {
+    const today = model();
+    expect(today.summary).toContain(`${today.needsAction.length} items need action today`);
+    const awaiting = today.needsAction.filter(item => item.kind === "first-response").length;
+    expect(today.summary).toContain(`including ${awaiting} leads waiting for a first response`);
+    const deadlines = today.needsAction.map(item => item.responseDeadline);
+    const firstOther = deadlines.findIndex(value => value === undefined);
+    expect(deadlines.slice(firstOther).every(value => value === undefined)).toBe(true);
+    const rest = today.needsAction.slice(firstOther).map(item => item.dueAt);
+    expect(rest).toEqual([...rest].sort((a, b) => a - b));
+    expect(needsActionSummary(0, 0)).toBe("Nothing needs action today.");
+    expect(needsActionSummary(1, 0)).toBe("1 item needs action today.");
   });
 });

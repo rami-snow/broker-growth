@@ -4,7 +4,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { useUrlParam } from "@/components/use-url-param";
 import { useRouter } from "next/navigation";
 import { PageTitle } from "@/components/page-title";
-import { Badge, Button, EmptyState, SearchInput, Select, Table, Tabs, type BadgeTone } from "@/components/ui";
+import { Badge, Button, showingCount, EmptyState, SearchInput, Select, Table, Tabs, type BadgeTone } from "@/components/ui";
 import type { ActivityEvent } from "@/platform/audit/models";
 import type { Task } from "@/platform/tasks/models";
 import { loanPurposes, type MortgageLead, type MortgageLeadStatus } from "@/verticals/mortgage/leads/models";
@@ -74,7 +74,7 @@ export function LeadsListView({ leads, memberships, activities, tasks, now, canC
         <td>{lead.source || "Other"}</td>
         <td><small>{formatDayMonth(lastActivity)}</small></td>
       </tr>; })}</tbody>
-      <tfoot><tr><td colSpan={4}>Showing {filtered.length} of {leads.length} leads</td><td colSpan={3} style={{ textAlign: "right" }}>Sorted by {sortLabel}</td></tr></tfoot>
+      <tfoot><tr><td colSpan={4}>{showingCount(filtered.length, leads.length, "lead")}</td><td colSpan={3} style={{ textAlign: "right" }}>Sorted by {sortLabel}</td></tr></tfoot>
     </Table> : <section className="card"><EmptyState title="No leads match these filters" body="Change the tab, search or filters to see more leads."/></section>}
     {creating && renderCreate(() => setCreating(false))}
   </>;

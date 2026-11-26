@@ -6,6 +6,7 @@ import { needsFirstResponse } from "@/verticals/mortgage/leads/response";
 import { usePrototype } from "./prototype-provider";
 import { BrokerageSelect, Sidebar } from "./sidebar";
 import { FixtureCommandBar } from "./command-bar";
+import { EnvironmentRibbon } from "./environment-ribbon";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { repo, context, now, revision, switchOrganisation, switchUser } = usePrototype(); void revision;
@@ -14,7 +15,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const brokerage = state.organisations.find(item => item.id === context.organisationId)!;
   const activities = state.activities.filter(item => item.organisationId === context.organisationId);
   const leadsBadge = membership.capabilities.includes("lead.view") ? repo.listLeads(context).filter(lead => needsFirstResponse(lead, activities, now())).length : 0;
-  return <div className="app-shell">
+  return <div className="app-shell app-shell--ribbon">
+    <EnvironmentRibbon mode="fixture"><label htmlFor="dev-user">User</label><select id="dev-user" value={context.userId} onChange={event => switchUser(event.target.value as UserId)}>{state.users.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></EnvironmentRibbon>
     <Sidebar
       capabilities={membership.capabilities}
       brokerageName={brokerage.name}
@@ -22,7 +24,6 @@ export function AppShell({ children }: { children: ReactNode }) {
       leadsBadge={leadsBadge}
       userName={user.name}
       userPosition={membership.mortgageProfile.position}
-      footer={<details className="dev-panel"><summary>Development prototype · resets on reload</summary><label htmlFor="dev-user">Development user</label><select id="dev-user" className="ui-control ui-select" value={context.userId} onChange={event => switchUser(event.target.value as UserId)}>{state.users.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select><p>Switchers simulate identity and brokerage context. They are not authentication.</p></details>}
     />
     <main className="app-main"><div className="workspace">{children}</div></main>
     <FixtureCommandBar/>

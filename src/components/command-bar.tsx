@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { OPEN_COMMAND_BAR_EVENT } from "./command-bar-events";
-import { allowedLinks, commandCreateActions, commandGoTo, commandGroupLabels, commandOpenLabels, matchRecords, type CommandRecord } from "./command-bar-model";
+import { allowedLinks, commandCreateActions, commandGoTo, commandGroupLabels, commandOpenLabels, commandSearchStatus, matchRecords, recordsFor, type CommandRecord, type CommandSearchResult } from "./command-bar-model";
 import { usePrototype } from "./prototype-provider";
 import { searchWorkspaceRecords } from "@/app/command-actions";
 
@@ -18,11 +18,11 @@ const isTypingTarget = (target: EventTarget | null) => target instanceof HTMLEle
  */
 export function CommandBar({ capabilities, search }: { capabilities: readonly string[]; search: (query: string) => Promise<CommandRecord[]> | CommandRecord[] }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false), [query, setQuery] = useState(""), [records, setRecords] = useState<CommandRecord[]>([]), [active, setActive] = useState(0), [, startTransition] = useTransition();
+  const [open, setOpen] = useState(false), [query, setQuery] = useState(""), [results, setResults] = useState<CommandSearchResult | null>(null), [active, setActive] = useState(0), [, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null), pendingG = useRef<number | null>(null), requestId = useRef(0);
   const create = useMemo(() => allowedLinks(commandCreateActions, capabilities), [capabilities]);
   const goTo = useMemo(() => allowedLinks(commandGoTo, capabilities), [capabilities]);
-  const close = useCallback(() => { setOpen(false); setQuery(""); setRecords([]); setActive(0); }, []);
+  const close = useCallback(() => { setOpen(false); setQuery(""); setResults(null); setActive(0); }, []);
   const navigate = useCallback((href: string) => { close(); router.push(href); }, [close, router]);
 
   useEffect(() => {
@@ -42,17 +42,18 @@ export function CommandBar({ capabilities, search }: { capabilities: readonly st
     if (!open) return;
     const id = ++requestId.current;
     if (query.trim().length < 2) return;
-    const handle = window.setTimeout(() => startTransition(async () => { const result = await search(query); if (requestId.current === id) { setRecords(result); setActive(0); } }), 150);
+    const handle = window.setTimeout(() => startTransition(async () => { const result = await search(query); if (requestId.current === id) { setResults({ query, records: result }); setActive(0); } }), 150);
     return () => window.clearTimeout(handle);
   }, [open, query, search]);
 
   const entries: Entry[] = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const recordEntries = (q.length >= 2 ? records : []).map(record => ({ key: `${record.kind}:${record.id}`, label: record.title, description: record.description, href: record.href, hint: commandOpenLabels[record.kind], group: commandGroupLabels[record.kind] }));
+    const recordEntries = recordsFor(query, results).map(record => ({ key: `${record.kind}:${record.id}`, label: record.title, description: record.description, href: record.href, hint: commandOpenLabels[record.kind], group: commandGroupLabels[record.kind] }));
     const filter = <T extends { label: string }>(items: T[]) => { const matching = q ? items.filter(item => item.label.toLowerCase().includes(q)) : items; return matching.length ? matching : items; };
     return [...recordEntries, ...filter(create).map(item => ({ key: item.href, label: item.label, href: item.href, group: "Actions" })), ...filter(goTo).map(item => ({ key: `go:${item.href}`, label: item.label, href: item.href, hint: item.shortcut ? `G then ${item.shortcut}` : undefined, group: "Go to" }))];
-  }, [records, create, goTo, query]);
+  }, [results, create, goTo, query]);
   if (!open) return null;
+  const searchStatus = commandSearchStatus(query, results);
   const groups = Array.from(new Set(entries.map(entry => entry.group)));
   const onKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === "Escape") { event.preventDefault(); close(); }
@@ -64,7 +65,7 @@ export function CommandBar({ capabilities, search }: { capabilities: readonly st
     <div className="command-palette" role="dialog" aria-modal="true" aria-label="Command bar" onKeyDown={onKeyDown}>
       <div className="command-palette__input"><Search aria-hidden/><input ref={inputRef} value={query} onChange={event => setQuery(event.target.value)} placeholder="Search leads, clients and partners" aria-label="Search records and commands" role="combobox" aria-expanded="true" aria-controls="command-results" aria-activedescendant={entries[active] ? `command-${active}` : undefined}/><kbd className="kbd">Esc</kbd></div>
       <div className="command-palette__results" id="command-results" role="listbox" aria-label="Results">
-        {query.trim().length >= 2 && !records.length && <p className="command-palette__empty">No matching records. Try a name, email or phone number.</p>}
+        {searchStatus === "searching" && <p className="command-palette__empty" role="status">Searching…</p>}{searchStatus === "empty" && <p className="command-palette__empty" role="status">No matching records. Try a name, email or phone number.</p>}
         {groups.map(group => { const items = entries.map((entry, index) => ({ entry, index })).filter(item => item.entry.group === group); const isRecords = !["Actions", "Go to"].includes(group); return <div className="command-group" key={group} role="group" aria-label={group}><p className="command-group__label">{group}{isRecords && <span> {items.length} {items.length === 1 ? "match" : "matches"}</span>}</p>
           {items.map(({ entry, index }) => <div key={entry.key} id={`command-${index}`} role="option" aria-selected={index === active} className={`command-item${index === active ? " active" : ""}${entry.description ? " command-item--record" : ""}`} onMouseEnter={() => setActive(index)} onClick={() => navigate(entry.href)}><span className="command-item__text"><span>{entry.label}</span>{entry.description && <small>{entry.description}</small>}</span>{entry.hint && <span className="command-item__hint">{entry.hint}</span>}</div>)}
         </div>; })}
