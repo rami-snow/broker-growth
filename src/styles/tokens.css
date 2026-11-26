@@ -1,11 +1,26 @@
+/* Semantic tokens aligned to the Figma "Broker Growth Desk – AI-native redesign" Geist palette. */
 :root {
-  --brand-nordic-blue:#032d42; --brand-turquoise:#26ddf9; --brand-off-white:#f8f8f8;
-  --color-text-primary:#292a2e; --color-text-subtle:#505258; --color-text-subtlest:#6b6e76; --color-text-inverse:#fff; --color-text-disabled:rgba(8,15,33,.29);
-  --color-bg-canvas:#f8f8f8; --color-bg-surface:#fff; --color-bg-subtle:#f0f1f2; --color-bg-action:#2f6b8a; --color-bg-action-hover:#285f7b; --color-bg-disabled:rgba(23,23,23,.04);
-  --color-border-default:rgba(11,18,14,.14); --color-border-strong:rgba(11,18,14,.28); --color-border-focus:#2f6b8a;
-  --color-danger:#c9372c; --color-danger-subtle:#ffd5d2; --color-danger-text:#5d1f1a; --color-warning:#fca700; --color-warning-subtle:#fff5db; --color-warning-text:#7a4700; --color-success:#1f845a; --color-success-subtle:#dcfff1; --color-success-text:#14533a; --color-info:#2f6b8a; --color-info-subtle:#e7f3f7;
+  --gray-100:#f2f2f2; --gray-200:#ebebeb; --gray-400:#ebebeb; --gray-700:#8f8f8f; --gray-900:#4d4d4d; --gray-1000:#171717;
+  --gray-alpha-400:rgba(0,0,0,.08); --background-100:#fff; --background-200:#fafafa;
+  --blue-200:#ebf5ff; --blue-700:#0072f5; --blue-900:#0068d6;
+  --amber-200:#fff4d6; --amber-900:#a35200;
+  --red-200:#ffebeb; --red-900:#cb2a2f;
+  --green-200:#e5f7e9; --green-900:#257a3e;
+  --teal-200:#defaf5; --teal-900:#08756a;
+
+  --color-text-primary:var(--gray-1000); --color-text-subtle:var(--gray-900); --color-text-subtlest:var(--gray-700); --color-text-inverse:#fff; --color-text-disabled:#a8a8a8; --color-link:var(--blue-700);
+  --color-bg-canvas:var(--background-100); --color-bg-surface:var(--background-100); --color-bg-sidebar:var(--background-200); --color-bg-subtle:var(--gray-100); --color-bg-muted:var(--background-200); --color-bg-selected:var(--gray-200);
+  --color-bg-action:var(--gray-1000); --color-bg-action-hover:#383838; --color-bg-disabled:var(--gray-100);
+  --color-border-default:var(--gray-400); --color-border-strong:var(--gray-alpha-400); --color-border-focus:var(--blue-700);
+  --color-danger:var(--red-900); --color-danger-subtle:var(--red-200); --color-danger-text:var(--red-900);
+  --color-warning:var(--amber-900); --color-warning-subtle:var(--amber-200); --color-warning-text:var(--amber-900);
+  --color-success:var(--green-900); --color-success-subtle:var(--green-200); --color-success-text:var(--green-900);
+  --color-info:var(--blue-900); --color-info-subtle:var(--blue-200);
+  --color-teal:var(--teal-900); --color-teal-subtle:var(--teal-200);
   --space-050:4px; --space-075:6px; --space-100:8px; --space-150:12px; --space-200:16px; --space-250:20px; --space-300:24px; --space-400:32px;
-  --radius-04:4px; --radius-06:6px; --radius-08:8px; --radius-10:10px; --radius-16:16px; --radius-full:999px;
-  --focus-ring:0 0 0 2px #f8f8f8,0 0 0 4px #2f6b8a; --shadow-overlay:0 12px 32px rgba(3,45,66,.12);
-  --font-sans:"Helvetica Neue",Helvetica,Arial,sans-serif; --sidebar:252px;
+  --radius-04:4px; --radius-06:6px; --radius-08:8px; --radius-10:8px; --radius-16:8px; --radius-full:999px;
+  --focus-ring:0 0 0 2px #fff,0 0 0 4px var(--blue-700); --shadow-overlay:0 16px 48px rgba(0,0,0,.12),0 0 0 1px rgba(0,0,0,.06);
+  --font-sans:var(--font-geist-sans),"Geist",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-mono:var(--font-geist-mono),"Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sidebar:240px; --topbar:56px; --page-gutter:32px;
 }
