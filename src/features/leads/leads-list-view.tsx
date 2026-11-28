@@ -4,7 +4,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { useUrlParam } from "@/components/use-url-param";
 import { useRouter } from "next/navigation";
 import { PageTitle } from "@/components/page-title";
-import { Badge, Button, showingCount, EmptyState, SearchInput, Select, Table, Tabs, type BadgeTone } from "@/components/ui";
+import { Badge, Button, showingCount, EmptyState, SearchInput, Select, Table, Tabs, type BadgeTone, ButtonLink } from "@/components/ui";
 import type { ActivityEvent } from "@/platform/audit/models";
 import type { Task } from "@/platform/tasks/models";
 import { loanPurposes, type MortgageLead, type MortgageLeadStatus } from "@/verticals/mortgage/leads/models";
@@ -54,7 +54,7 @@ export function LeadsListView({ leads, memberships, activities, tasks, now, canC
   const open = (id: string) => router.push(`/leads/${id}`);
   const sortLabel = { response: "first response due", newest: "newest first", activity: "last activity" }[sort];
   return <>
-    <PageTitle title="Leads" action={canCreate ? <Button onClick={() => setCreating(true)}>New lead</Button> : undefined}/>
+    <PageTitle title="Leads" action={canCreate ? <><ButtonLink variant="secondary" href="/import?type=leads">Import leads</ButtonLink><Button onClick={() => setCreating(true)}>New lead</Button></> : undefined}/>
     <Tabs label="Lead views" value={tab} onChange={setTab} options={[{ value: "all", label: "All", count: count("all") }, { value: "needs-response", label: "Needs response", count: count("needs-response") }, { value: "unassigned", label: "Unassigned", count: count("unassigned") }, { value: "discovery", label: "Discovery booked", count: count("discovery") }, { value: "closed", label: "Closed", count: count("closed") }]}/>
     <section className="filter-bar" aria-label="Lead filters">
       <SearchInput label="Search leads" placeholder="Search leads" value={search} onChange={event => setSearch(event.target.value)}/>

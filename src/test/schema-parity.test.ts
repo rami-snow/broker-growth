@@ -1,6 +1,7 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { consentProvenances } from "@/platform/consent/models";
 import { taskPriorities, taskStatuses } from "@/platform/tasks/models";
 import { annualReviewPurposeKey, annualReviewSourceKey, fixedExpiryPurposeKey, fixedExpirySourceKey } from "@/verticals/mortgage/campaigns/extensions";
 import { householdRelationships, householdStatuses } from "@/verticals/mortgage/households/models";
@@ -14,9 +15,13 @@ const migration = readFileSync(
   "utf8",
 );
 
+const migrationDirectory = resolve(process.cwd(), "supabase/migrations");
+const allMigrations = readdirSync(migrationDirectory).filter(file => file.endsWith(".sql")).sort().map(file => readFileSync(resolve(migrationDirectory, file), "utf8"));
+
+// The latest definition wins: later migrations may replace a constraint with a wider value list.
 function constraintValues(name: string) {
   const expression = new RegExp(`constraint ${name}\\s+check \\([\\s\\S]*?in \\(([^)]*)\\)`, "i");
-  const body = migration.match(expression)?.[1];
+  const body = allMigrations.map(sql => sql.match(expression)?.[1]).filter(Boolean).at(-1);
   if (!body) throw new Error(`Missing SQL constraint ${name}`);
   return [...body.matchAll(/'((?:''|[^'])*)'/g)].map((match) => match[1].replaceAll("''", "'"));
 }
@@ -34,6 +39,7 @@ describe("hosted schema domain parity", () => {
     ["mortgage_lead_details_timeframe_allowed", mortgageTimeframes],
     ["mortgage_household_members_relationship_allowed", householdRelationships],
     ["mortgage_loan_record_source_allowed", loanRecordSources],
+    ["consent_evidence_provenance_allowed", consentProvenances],
   ] as const)("keeps %s aligned with TypeScript", (constraint, domainValues) => {
     expect(constraintValues(constraint)).toEqual([...domainValues]);
   });

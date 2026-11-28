@@ -91,3 +91,64 @@ With `APP_RUNTIME_MODE=supabase` in your ignored `.env.local`:
 
 Migrations are forward-only. If something is wrong, stop and report it; a corrective migration is
 written rather than reverting the database.
+
+## CSV import (`20261128090500_csv_import.sql`)
+
+This later migration adds the CSV import. Apply it only after the five migrations above are on the
+development project. It:
+
+- allows `CSV import` as a loan-record source and a consent provenance;
+- lets `private.default_audit_actor_type` honour a transaction-local `app.audit_actor_type` flag, set
+  only inside the import, so review opportunities generated from imported loans are attributed to `import`;
+- adds `public.preview_mortgage_import` (read-only) and `public.import_mortgage_records` (security
+  definer, capability per kind, command ledger, at most 1,000 records, each record in its own
+  subtransaction, matched on email or phone).
+
+### 1. Confirm the target and dry run
+
+```bash
+pnpm exec supabase projects list
+pnpm exec supabase db push --dry-run --remote --skip-vault
+```
+
+Check: the linked project is **AI Native Operations** (`fgqgcikmaccjamwocpat`), and the dry run lists
+exactly one file, `20261128090500_csv_import.sql`. Stop if the name, reference or file list differs.
+
+### 2. Apply and regenerate types
+
+```bash
+pnpm exec supabase db push --remote --skip-vault
+pnpm db:types
+```
+
+Commit `src/platform/database/database.types.ts` if it changed (it gains the two new functions).
+
+### 3. Verify
+
+```bash
+pnpm db:test:hosted-csv-import
+```
+
+Check:
+- Every line is `ok - …`; the summary row shows `passed = 32`, `failed = 0`.
+- The residue query after the rollback shows `0` in all five columns. `import_activities` stays `0`
+  only until someone runs a real import on the development project.
+
+Then re-run the 4F.3 suite, which exercises the changed audit-actor default:
+
+```bash
+pnpm db:test:hosted-4f3
+```
+
+Check: `passed = 30`, `failed = 0`, as before.
+
+### 4. Check the app in Supabase mode
+
+- Clients → **Import clients** opens the import with "Clients and households" selected.
+- Choose a small CSV of clearly fictional people (for example two rows sharing a Household value and
+  one with a `Loan balance` column). The balance column is listed under "Columns not imported".
+- Preview, then import. The results table shows each record as Created, Already existed, Repeated in
+  file or Not imported, with a reason.
+- Import the same file again: the preview shows every record as "Already exists" and the Import
+  button is disabled.
+- Settings → Audit log shows `Import` as the actor for the created records and generated reviews.

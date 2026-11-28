@@ -32,6 +32,8 @@ SUPABASE_TEST_PASSWORD='<temporary fictional-user credential>' pnpm db:test:host
 pnpm db:test:hosted-client-book
 pnpm db:test:hosted-maintenance
 pnpm db:test:hosted-referrals
+pnpm db:test:hosted-4f3
+pnpm db:test:hosted-csv-import
 SUPABASE_HOSTED_PROJECT_REF='fgqgcikmaccjamwocpat' \
 SUPABASE_HOSTED_DATABASE_URL='<temporary TLS database connection string>' \
 SUPABASE_HOSTED_CA_CERT_PATH='<temporary path to the project SSL root certificate>' \
@@ -186,6 +188,10 @@ The nine desktop screens follow the Figma file "Broker Growth Desk – AI-native
 
 Phase 1 is desktop only. Nothing is sent, scheduled or exported. Supabase-mode Settings, Reports and Campaigns remain unavailable until their milestones.
 
-## Milestone 4F.3 — data foundations (migrations written, not yet applied)
+## Milestone 4F.3 — data foundations
 
 Five migrations add an audit actor (person, system, import), a brokerage time zone, partner next steps, household notes and loan rate type (Fixed, Variable, Split). Business dates, form date-times and displayed times all use the brokerage time zone. The recovered-lead period (30 days) is one setting in `src/verticals/mortgage/reporting/settings.ts`. To apply and verify them on the development project, follow `docs/4f3-hosted-runbook.md`.
+
+### CSV import
+
+`/import` brings in leads, clients and households, or referral partners from any CRM export (entry points on Leads, Clients, Partners and Settings → Data sources). The CSV file is read in the browser and is never uploaded or stored; only the parsed records the person confirms are sent to `public.import_mortgage_records`. Columns are matched automatically and can be changed; balance, rate, repayment and other financial columns are always ignored. Records are matched on normalised email or phone (partners with neither: name and organisation), so importing the same file again creates nothing new. Each record succeeds or fails on its own, consent is always recorded as Not recorded, loan records are marked Unverified with source CSV import, and every resulting audit entry — including review opportunities generated from imported loans — has the actor `import`. At most 1,000 rows per import. In fixture mode the import changes only in-memory state. Apply and verify the migration with the "CSV import" section of `docs/4f3-hosted-runbook.md`.

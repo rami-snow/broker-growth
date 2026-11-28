@@ -344,3 +344,13 @@ p.legal-note{margin:12px 0 0}
 .env-ribbon select{height:22px;font-size:12px;border:1px solid rgba(163,82,0,.3);border-radius:var(--radius-04);background:#fff;color:var(--color-text-primary);padding:0 4px}
 .card__footer--split{display:flex;justify-content:space-between;gap:12px;align-items:center}
 .next-step-editor{display:flex;flex-direction:column;gap:6px;margin-top:12px;max-width:420px}.next-step-editor .ui-button{align-self:flex-start}.rate-type-control{display:inline-flex;align-items:center;gap:6px}.rate-type-control select{height:32px;width:auto}
+
+/* CSV import */
+.import-steps{display:flex;gap:8px;list-style:none;margin:0;padding:0;counter-reset:step;font-size:13px;color:var(--color-text-subtle)}
+.import-steps li{counter-increment:step;display:flex;align-items:center;gap:6px;padding:4px 10px;border:1px solid var(--color-border-default);border-radius:999px}
+.import-steps li::before{content:counter(step);font-family:var(--font-mono);font-size:12px}
+.import-steps li[aria-current="step"]{color:var(--color-text-primary);border-color:var(--color-text-primary);font-weight:500}
+.import-kinds{display:flex;flex-wrap:wrap;gap:16px;border:0;margin:0;padding:0}
+.import-kinds legend{margin-bottom:8px}
+.import-kinds label{display:flex;align-items:center;gap:6px;font-size:14px}
+.notice--danger{border-color:var(--color-danger);color:var(--color-danger)}

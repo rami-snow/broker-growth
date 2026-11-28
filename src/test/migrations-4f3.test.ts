@@ -35,7 +35,7 @@ function definitionIn(sql: string, name: string) {
 
 describe("4F.3 migrations", () => {
   it("are the five approved migrations, in the approved order, after every existing migration", () => {
-    expect(files.slice(-5)).toEqual(ordered);
+    expect(files.filter(file => file >= ordered[0]! && file < "20261128090500")).toEqual(ordered);
   });
 
   it("(a) adds an actor type, backfills existing entries and keeps audit tables append-only", () => {

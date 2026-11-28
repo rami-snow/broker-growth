@@ -26,6 +26,7 @@
     "db:test:hosted-maintenance": "supabase db query --remote=fgqgcikmaccjamwocpat --file supabase/tests/hosted-client-maintenance-operations.sql --yes",
     "db:test:hosted-referrals": "supabase db query --remote=fgqgcikmaccjamwocpat --file supabase/tests/hosted-referral-partner-operations.sql --yes",
     "db:test:hosted-4f3": "supabase db query --remote=fgqgcikmaccjamwocpat --file supabase/tests/hosted-4f3-operations.sql --yes",
+    "db:test:hosted-csv-import": "supabase db query --remote=fgqgcikmaccjamwocpat --file supabase/tests/hosted-csv-import-operations.sql --yes",
     "db:types": "supabase gen types --lang=typescript --schema public --remote=fgqgcikmaccjamwocpat > src/platform/database/database.types.ts"
   },
   "dependencies": {

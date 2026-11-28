@@ -5,7 +5,7 @@ import type { LoanPurpose } from "@/verticals/mortgage/leads/models";
 export type MinimalLoanRecordId=`loan_${string}`;
 export const loanRecordStatuses=["Active","Discharged","Unknown"]as const;
 export type LoanRecordStatus=(typeof loanRecordStatuses)[number];
-export const loanRecordSources=["Lead conversion","Manual entry","Imported fixture"]as const;
+export const loanRecordSources=["Lead conversion","Manual entry","Imported fixture","CSV import"]as const;
 export type LoanRecordSource=(typeof loanRecordSources)[number];
 export const dataConfidences=["Confirmed","Unverified"]as const;
 export type DataConfidence=(typeof dataConfidences)[number];
