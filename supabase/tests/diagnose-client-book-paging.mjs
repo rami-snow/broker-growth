@@ -35,7 +35,10 @@ from unnest(array['contact.view','lead.view','mortgage.household.view']) capabil
 insert into step_timing values ('setup data', clock_timestamp(), null);
 ${setupData}
 update step_timing set finished = clock_timestamp() where step = 'setup data';
-`;
+${process.env.WITH_ANALYZE ? `insert into step_timing values ('refresh statistics', clock_timestamp(), null);
+analyze public.contacts, public.leads, public.mortgage_households, public.mortgage_household_members;
+update step_timing set finished = clock_timestamp() where step = 'refresh statistics';
+` : ""}`;
 
 // EXPLAIN mode: show the planner's plan (not executed) for the duplicate preview's query body, as the test user.
 if (process.env.EXPLAIN_DUPLICATES) {
@@ -52,9 +55,11 @@ if (process.env.EXPLAIN_DUPLICATES) {
 }
 
 const variants = [["setup only", []], ...checks.map((line, index) => [`setup + check ${index + 1}`, index > 0 && line.includes("paging_result") ? [checks[0], line] : [line]])];
+const only = process.env.ONLY ? process.env.ONLY.split(",").map(Number) : undefined;
 const directory = mkdtempSync(join(tmpdir(), "bgd-paging-diagnosis-"));
 try {
-  for (const [name, lines] of variants) {
+  for (const [variantIndex, [name, lines]] of variants.entries()) {
+    if (only && !only.includes(variantIndex)) continue;
     const body = lines.map((line, index) => `insert into step_timing values ('${index === lines.length - 1 ? "measured step" : "prerequisite step"}', clock_timestamp(), null);
 set local role authenticated;
 ${line}
