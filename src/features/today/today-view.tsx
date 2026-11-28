@@ -2,9 +2,19 @@ import Link from "next/link";
 import { CalendarDays, ChevronRight, Clock, Mail, Phone, User, Video } from "lucide-react";
 import { PageTitle } from "@/components/page-title";
 import { Avatar, Badge, Card, MetricCard } from "@/components/ui";
-import { formatTime, NEEDS_ACTION_LIMIT, type TodayIcon, type TodayModel } from "./today-model";
+import { formatTime, NEEDS_ACTION_LIMIT, type NeedsActionItem, type TodayIcon, type TodayModel } from "./today-model";
 
 const icons: Record<TodayIcon, typeof Phone> = { phone: Phone, user: User, mail: Mail, calendar: CalendarDays, clock: Clock, video: Video };
+
+/** One Needs action item with its manual buttons. Used on Today and on the full Needs action page. */
+export function NeedsActionRow({ item }: { item: NeedsActionItem }) {
+  const Icon = icons[item.icon];
+  return <div className="list-row">
+    <span className="list-row__icon" aria-hidden><Icon/></span>
+    <div className="list-row__body"><span className="list-row__title">{item.title}<Badge tone={item.badge.tone}>{item.badge.label}</Badge></span><p className="list-row__text">{item.text}</p></div>
+    <div className="list-row__actions">{item.actions.map(action => <Link key={action.label} href={action.href} className={`ui-button ui-button--small ${action.primary ? "ui-button--primary" : "ui-button--secondary"}`}>{action.label}</Link>)}</div>
+  </div>;
+}
 
 /** Today (Figma frame 01). Presentational; both runtimes pass a model built by `buildToday`. */
 export function TodayView({ model, newLeadAction, auditHref }: { model: TodayModel; newLeadAction?: React.ReactNode; auditHref?: string }) {
@@ -21,12 +31,8 @@ export function TodayView({ model, newLeadAction, auditHref }: { model: TodayMod
     <div className="today-columns">
       <div className="stack">
         <Card title="Needs action" labelledBy="needs-action-heading" action={<Badge>{model.needsAction.length}</Badge>}>
-          {model.needsAction.length ? model.needsAction.slice(0, NEEDS_ACTION_LIMIT).map(item => { const Icon = icons[item.icon]; return <div key={item.id} className="list-row">
-            <span className="list-row__icon" aria-hidden><Icon/></span>
-            <div className="list-row__body"><span className="list-row__title">{item.title}<Badge tone={item.badge.tone}>{item.badge.label}</Badge></span><p className="list-row__text">{item.text}</p></div>
-            <div className="list-row__actions">{item.actions.map(action => <Link key={action.label} href={action.href} className={`ui-button ui-button--small ${action.primary ? "ui-button--primary" : "ui-button--secondary"}`}>{action.label}</Link>)}</div>
-          </div>; }) : <p className="card__empty">Nothing needs action right now.</p>}
-          {model.needsAction.length > NEEDS_ACTION_LIMIT && <div className="card__footer muted">Showing the {NEEDS_ACTION_LIMIT} most urgent of {model.needsAction.length}, ordered by response deadline, then due date.</div>}
+          {model.needsAction.length ? model.needsAction.slice(0, NEEDS_ACTION_LIMIT).map(item => <NeedsActionRow key={item.id} item={item}/>) : <p className="card__empty">Nothing needs action right now.</p>}
+          {model.needsAction.length > 0 && <div className="card__footer card__footer--split"><span className="muted">{model.needsAction.length > NEEDS_ACTION_LIMIT ? `Showing the ${NEEDS_ACTION_LIMIT} most urgent of ${model.needsAction.length}, ordered by response deadline, then due date.` : "Ordered by response deadline, then due date."}</span><Link href="/today/needs-action">View all</Link></div>}
         </Card>
         <Card title="Today’s priorities" labelledBy="priorities-heading" meta="Sorted by response deadline, then due date">
           {model.priorities.length ? model.priorities.map(item => { const Icon = icons[item.icon]; return <Link key={item.id} href={item.href} className="list-row list-row--compact">

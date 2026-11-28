@@ -4,9 +4,14 @@ import type { RetentionTodaySnapshot } from "@/verticals/mortgage/repositories/c
 import { buildToday, type TodayReview } from "./today-model";
 import { TodayView } from "./today-view";
 
-export function PersistentTodayScreen({ snapshot, retention, userName, capabilities = [], now = new Date() }: { snapshot: LeadOperationsSnapshot; retention: RetentionTodaySnapshot; userName?: string; capabilities?: string[]; now?: Date }) {
+/** Supabase adapter shared by Today and the Needs action page. */
+export function buildPersistentTodayModel(snapshot: LeadOperationsSnapshot, retention: RetentionTodaySnapshot, userName: string | undefined, now: Date) {
   const rows = new Map<string, TodayReview>();
   for (const row of [...retention.annualDue, ...retention.fixedApproaching, ...retention.unassigned]) rows.set(row.opportunityId, { id: row.opportunityId, householdId: row.householdId, householdName: row.householdName, type: row.triggerType, triggerDate: row.triggerDate, status: row.effectiveStatus, ownerName: row.ownerName });
-  const model = buildToday({ now, userName: userName ?? "there", leads: snapshot.leads, memberships: snapshot.memberships, tasks: snapshot.tasks, appointments: snapshot.appointments, activities: snapshot.activities, reviews: [...rows.values()] });
+  return buildToday({ now, userName: userName ?? "there", leads: snapshot.leads, memberships: snapshot.memberships, tasks: snapshot.tasks, appointments: snapshot.appointments, activities: snapshot.activities, reviews: [...rows.values()] });
+}
+
+export function PersistentTodayScreen({ snapshot, retention, userName, capabilities = [], now = new Date() }: { snapshot: LeadOperationsSnapshot; retention: RetentionTodaySnapshot; userName?: string; capabilities?: string[]; now?: Date }) {
+  const model = buildPersistentTodayModel(snapshot, retention, userName, now);
   return <TodayView model={model} auditHref={capabilities.includes("settings.view") ? "/settings?tab=audit" : undefined} newLeadAction={capabilities.includes("lead.create") ? <Link className="ui-button ui-button--primary" href="/leads?new=1">New lead</Link> : undefined}/>;
 }

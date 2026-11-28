@@ -22,7 +22,9 @@ export interface TodayInputs {
 }
 export type TodayIcon = "phone" | "user" | "mail" | "calendar" | "clock" | "video";
 export interface TodayAction { label: string; href: string; primary?: boolean }
-export interface NeedsActionItem { id: string; kind: "first-response" | "unassigned" | "annual-review" | "fixed-rate"; icon: TodayIcon; title: string; badge: { label: string; tone: BadgeTone }; text: string; actions: TodayAction[]; responseDeadline?: number; dueAt: number }
+export type NeedsActionKind = "first-response" | "unassigned" | "annual-review" | "fixed-rate";
+export const needsActionKinds: Array<{ value: NeedsActionKind; label: string }> = [{ value: "first-response", label: "First response" }, { value: "unassigned", label: "Unassigned" }, { value: "annual-review", label: "Annual review" }, { value: "fixed-rate", label: "Fixed-rate expiry" }];
+export interface NeedsActionItem { id: string; kind: NeedsActionKind; icon: TodayIcon; title: string; badge: { label: string; tone: BadgeTone }; text: string; actions: TodayAction[]; responseDeadline?: number; dueAt: number }
 /** Today shows the most urgent items only; the card states how many more there are. */
 export const NEEDS_ACTION_LIMIT = 5;
 export interface PriorityItem { id: string; icon: TodayIcon; title: string; detail: string; ownerName?: string; status: { label: string; tone: BadgeTone }; href: string; responseDeadline?: number; dueAt: number }
