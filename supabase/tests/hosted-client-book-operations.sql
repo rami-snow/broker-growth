@@ -236,6 +236,11 @@ insert into public.contacts(id,organisation_id,given_name,family_name,email,emai
 insert into public.leads(id,organisation_id,contact_id,owner_membership_id,source,lifecycle_status,version) values
 ('4c120001-0000-4000-8000-000000000099','10000000-0000-0000-0000-000000000001','4c110001-0000-4000-8000-000000000099','30000000-0000-0000-0000-000000000004','4C.1 pagination verification','Discovery booked',3);
 
+-- Refresh planner statistics so the 205 rows inserted above are visible to the planner. Without this it assumes
+-- ~1 row per table and picks a contact x household cross product with per-row RLS checks (85 s+ instead of 0.02 s).
+-- ANALYZE runs inside this transaction and its statistics roll back with it.
+analyze public.contacts, public.leads, public.mortgage_households, public.mortgage_household_members;
+
 set local role authenticated;
 create temp table paging_result as select public.list_mortgage_households('10000000-0000-0000-0000-000000000001',null,null,null,'name',1,25) result;
 select pg_temp.check_result((result->>'total')::integer=(select household_count+205 from paging_baseline),'database total is exact beyond two hundred') from paging_result;
