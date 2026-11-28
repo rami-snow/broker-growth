@@ -30,7 +30,13 @@ set local role anon;
 select pg_temp.m4f3_error($sql$select public.organisation_time_zone('10000000-0000-0000-0000-000000000001')$sql$,'permission denied','anonymous users cannot read a brokerage zone');
 reset role;
 
--- Dana (Broker, owner of March household) runs household operations.
+-- Dana (Broker, owner of March household) runs household operations. The development seed gives her only
+-- lead capabilities, so grant the household and loan capabilities here; they roll back with the transaction.
+insert into public.membership_capabilities(organisation_id,membership_id,capability) values
+('10000000-0000-0000-0000-000000000001','30000000-0000-0000-0000-000000000004','mortgage.household.view'),
+('10000000-0000-0000-0000-000000000001','30000000-0000-0000-0000-000000000004','mortgage.household.update'),
+('10000000-0000-0000-0000-000000000001','30000000-0000-0000-0000-000000000004','mortgage.loan-record.manage')
+on conflict do nothing;
 select set_config('request.jwt.claim.sub',(select user_id::text from public.organisation_memberships where id='30000000-0000-0000-0000-000000000004'),true);
 set local role authenticated;
 select pg_temp.m4f3_check(public.organisation_time_zone('10000000-0000-0000-0000-000000000001')='Australia/Sydney','members read their brokerage zone');
