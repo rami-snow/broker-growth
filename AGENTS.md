@@ -14,7 +14,8 @@
 - Campaign runtime extensions receive explicit typed dependencies. Do not let callbacks import repositories, fixtures, globals or hidden singletons.
 - Minimal loan records are for retention scheduling only. Do not add balances, rates or assessment fields.
 - Never imply that development switchers, consent summaries, fixture state or contact actions are production secure or persistent.
-- Do not introduce financial assessment data, lender comparisons, recommendations, financial advice, production messaging, file uploads or construction terminology.
+- Do not introduce financial assessment data, lender comparisons, recommendations, financial advice, production messaging or construction terminology.
+- No file uploads or file storage. CSV files may be read in the browser for import. The file itself is never sent to or kept by the server.
 - Build controls from `src/components/ui.tsx` and semantic values from `src/styles/tokens.css`.
 - Add tests for lifecycle, tenancy, permission and metric changes.
 - Use only clearly fictional information.
