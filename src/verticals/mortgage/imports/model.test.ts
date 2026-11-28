@@ -63,6 +63,14 @@ describe("duplicate plan", () => {
     expect(plan.map(item => item.status === "exists" ? `exists:${item.matchedOn}` : item.status)).toEqual(["exists:email", "exists:phone", "new", "repeated"]);
     expect(importSummary(plan, [])).toEqual({ create: 1, existing: 2, repeated: 1, errors: 0 });
   });
+  it("matches email case-insensitively with spaces trimmed, and phones across +61 and 0 forms", () => {
+    const { records } = read("leads", "First name,Last name,Email,Phone\nA,One,  Ana.One@Example.TEST ,\nB,Two,,+61 (0) 400 333 444\nC,Three,,0061 400 555 666\n");
+    expect(records.map(record => record.kind === "leads" && [record.email, record.phone])).toEqual([["ana.one@example.test", undefined], [undefined, "0400333444"], [undefined, "0400555666"]]);
+    const plan = planImport(records, { ...none, leadContacts: [{ email: "ana.one@example.test" }, { phone: "0400333444" }, { phone: "0400555666" }] });
+    expect(plan.map(item => item.status === "exists" ? item.matchedOn : item.status)).toEqual(["email", "phone", "phone"]);
+    const repeated = planImport(read("leads", "First name,Last name,Phone\nA,One,0400 777 888\nB,Two,+61400777888\n").records, none);
+    expect(repeated[1]).toMatchObject({ status: "repeated", firstRows: [2] });
+  });
   it("is idempotent: re-running the same file after import creates nothing", () => {
     const csv = "Household,First name,Last name,Email,Phone\nCove,Amelia,Cove,amelia@example.test,\nCove,Jonah,Cove,,0490 100 004\n";
     const { records } = read("clients", csv, "m_dana");

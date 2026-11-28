@@ -92,10 +92,10 @@ With `APP_RUNTIME_MODE=supabase` in your ignored `.env.local`:
 Migrations are forward-only. If something is wrong, stop and report it; a corrective migration is
 written rather than reverting the database.
 
-## CSV import (`20261128090500_csv_import.sql`)
+## CSV import (`20261128090500_csv_import.sql`, `20261128090600_import_phone_matching_and_failure_codes.sql`)
 
-This later migration adds the CSV import. Apply it only after the five migrations above are on the
-development project. It:
+These two later migrations add the CSV import. Apply them only after the five migrations above are on
+the development project. The first:
 
 - allows `CSV import` as a loan-record source and a consent provenance;
 - lets `private.default_audit_actor_type` honour a transaction-local `app.audit_actor_type` flag, set
@@ -103,6 +103,15 @@ development project. It:
 - adds `public.preview_mortgage_import` (read-only) and `public.import_mortgage_records` (security
   definer, capability per kind, command ledger, at most 1,000 records, each record in its own
   subtransaction, matched on email or phone).
+
+The second:
+
+- matches phone numbers across `+61`, `0061`, `+61 (0)` and leading-`0` forms for contacts and referral
+  partners, and recomputes stored normalised phones. If that would make two contacts in one brokerage
+  share a number, it stops with `PHONE_RENORMALISATION_WOULD_DUPLICATE_CONTACTS` and changes nothing:
+  report it rather than editing rows;
+- stores only an error code (for example `IMPORT_RECORD_FAILED:22008`) for a failed import record,
+  never the database message, which can quote a value from the record.
 
 ### 1. Confirm the target and dry run
 
@@ -112,7 +121,7 @@ pnpm exec supabase db push --dry-run --remote --skip-vault
 ```
 
 Check: the linked project is **AI Native Operations** (`fgqgcikmaccjamwocpat`), and the dry run lists
-exactly one file, `20261128090500_csv_import.sql`. Stop if the name, reference or file list differs.
+exactly the two files above, in that order (only the second if you already applied the first). Stop if the name, reference or file list differs.
 
 ### 2. Apply and regenerate types
 
@@ -121,7 +130,7 @@ pnpm exec supabase db push --remote --skip-vault
 pnpm db:types
 ```
 
-Commit `src/platform/database/database.types.ts` if it changed (it gains the two new functions).
+Commit `src/platform/database/database.types.ts` if it changed (it gains the two new public functions).
 
 ### 3. Verify
 
@@ -130,7 +139,8 @@ pnpm db:test:hosted-csv-import
 ```
 
 Check:
-- Every line is `ok - …`; the summary row shows `passed = 32`, `failed = 0`.
+- Every line is `ok - …`; the summary row shows `passed = 37`, `failed = 0` (36 checks plus the
+  planned-count check).
 - The residue query after the rollback shows `0` in all five columns. `import_activities` stays `0`
   only until someone runs a real import on the development project.
 
@@ -140,7 +150,7 @@ Then re-run the 4F.3 suite, which exercises the changed audit-actor default:
 pnpm db:test:hosted-4f3
 ```
 
-Check: `passed = 30`, `failed = 0`, as before.
+Check: `failed = 0`; the summary row shows `passed = 31` (30 checks plus the planned-count check).
 
 ### 4. Check the app in Supabase mode
 

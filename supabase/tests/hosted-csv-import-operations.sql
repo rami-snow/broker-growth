@@ -1,4 +1,5 @@
--- Milestone 4F.3 CSV import hosted verification for migration 20261128090500_csv_import.sql.
+-- Milestone 4F.3 CSV import hosted verification for migrations 20261128090500_csv_import.sql and
+-- 20261128090600_import_phone_matching_and_failure_codes.sql.
 -- Development project only. Every mutation runs inside one transaction and rolls back.
 -- All names and addresses are fictional and end in csvimport@example.test so residue is easy to find.
 begin;
@@ -98,6 +99,19 @@ insert into public.activity_events(organisation_id,entity_type,entity_id,event_t
 values('10000000-0000-0000-0000-000000000001','lead',gen_random_uuid(),'csvimport.probe','probe','30000000-0000-0000-0000-000000000004',clock_timestamp(),'{}');
 select pg_temp.csv_check((select actor_type='person' from public.activity_events where event_type='csvimport.probe'),'later entries in the same transaction are attributed normally');
 
+-- Phone forms, failure codes and what the command ledger keeps (migration 20261128090600).
+select pg_temp.csv_check((select count(distinct private.normalise_phone_number(form))=1 and min(private.normalise_phone_number(form))='0400111222' from unnest(array['0400 111 222','(04) 0011 1222','+61 400 111 222','0061 400 111 222','+61 (0) 400 111 222']) form),'+61, 0061, +61 (0), brackets and spaces normalise to one number');
+set local role authenticated;
+insert into csv_state select 'phone one',public.import_mortgage_records('10000000-0000-0000-0000-000000000001','c5f00000-0000-4000-8000-000000000006','leads','[{"firstName":"Pia","lastName":"Csvimport","phone":"0400 919 293"}]');
+insert into csv_state select 'phone two',public.import_mortgage_records('10000000-0000-0000-0000-000000000001','c5f00000-0000-4000-8000-000000000007','leads','[{"firstName":"Pia","lastName":"Again","phone":"+61 (0) 400 919 293"},{"firstName":"Ed","lastName":"Csvimport","email":"  ED.csvimport@Example.TEST ","nextActionAt":"x"}]');
+insert into csv_state select 'email again',public.preview_mortgage_import('10000000-0000-0000-0000-000000000001','leads','[{"firstName":"Ed","lastName":"Csvimport","email":"ed.csvimport@example.test"}]');
+insert into csv_state select 'bad date',public.import_mortgage_records('10000000-0000-0000-0000-000000000001','c5f00000-0000-4000-8000-000000000008','clients','[{"displayName":"Date household","ownerMembershipId":"30000000-0000-0000-0000-000000000004","members":[{"firstName":"Dee","lastName":"Csvimport","email":"dee.csvimport@example.test"}],"loans":[{"lenderName":"Example Mutual","nextReviewDate":"2027-02-31"}]}]');
+reset role;
+select pg_temp.csv_check((select result->'items'->0->>'outcome'='exists' and result->'items'->0->>'detail' like '%phone%' from csv_state where name='phone two'),'a +61 (0) number matches the same number written with a leading 0');
+select pg_temp.csv_check((select result->'items'->1->>'outcome'='created' from csv_state where name='phone two') and (select result->0->>'status'='exists' from csv_state where name='email again'),'email is trimmed and matched case-insensitively');
+select pg_temp.csv_check((select result->'items'->0->>'detail'='IMPORT_RECORD_FAILED:22008' from csv_state where name='bad date'),'a failed record stores an error code, not the database message');
+select pg_temp.csv_check(not exists(select 1 from public.operation_commands where command_id::text like 'c5f00000%' and (result::text ~* 'csvimport|2027-02-31|0400|Example Mutual' or request_fingerprint !~ '^[0-9a-f]{32}$')),'the command ledger keeps only a fingerprint and outcomes, no names, emails, phones or values');
+
 -- Refusals.
 delete from public.membership_capabilities where membership_id='30000000-0000-0000-0000-000000000004' and capability='mortgage.referral.manage';
 set local role authenticated;
@@ -112,7 +126,7 @@ set local role anon;
 select pg_temp.csv_error($sql$select public.preview_mortgage_import('10000000-0000-0000-0000-000000000001','leads','[]')$sql$,'permission denied','anonymous users cannot preview imports');
 reset role;
 
-select pg_temp.csv_check((select failed=0 and passed=31 from csv_results),'planned CSV import assertion count');
+select pg_temp.csv_check((select failed=0 and passed=36 from csv_results),'planned CSV import assertion count');
 select passed,failed,'hosted CSV import transaction will roll back' outcome from csv_results;
 rollback;
 

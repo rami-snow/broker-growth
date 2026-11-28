@@ -1,3 +1,4 @@
+import { normalisePhoneNumber } from "@/platform/contacts/phone";
 import { loanPurposes, mortgageTimeframes, type LoanPurpose, type MortgageTimeframe } from "@/verticals/mortgage/leads/models";
 import { rateTypes, type RateType } from "@/verticals/mortgage/loans/models";
 import { mortgageReferralPartnerTypes, NEXT_STEP_MAX_LENGTH, type MortgageReferralPartnerType } from "@/verticals/mortgage/referrals/models";
@@ -76,7 +77,7 @@ export function ignoredColumns(headers: string[], mapping: ColumnMapping) {
 }
 
 export const normaliseEmail = (value?: string) => value?.trim().toLowerCase() || undefined;
-export const normalisePhone = (value?: string) => value?.replace(/[^0-9]/g, "") || undefined;
+export const normalisePhone = (value?: string) => normalisePhoneNumber(value);
 export const normaliseName = (first: string, last: string) => `${first.trim()} ${last.trim()}`.toLowerCase();
 export const normalisePartnerText = (value?: string) => value?.trim().toLowerCase().replace(/\s+/g, " ") || undefined;
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -213,7 +214,8 @@ const failureMessages: Array<[RegExp, string]> = [
   [/REFERRAL_NAME_REQUIRED/, "Partner name is required"],
   [/VALID_HOUSEHOLD_RELATIONSHIP_REQUIRED/, "Each household needs exactly one Primary applicant, listed first"],
   [/HOUSEHOLD_DISPLAY_NAME_REQUIRED/, "Household name and at least one member are required"],
-  [/unique|duplicate key/i, "A matching record was created at the same time; import the file again to match it"],
+  [/23505|unique|duplicate key/i, "A matching record was created at the same time; import the file again to match it"],
+  [/IMPORT_RECORD_FAILED:22/, "A value in this record is not in a recognised format"],
 ];
 /** Turns a database refusal code into a sentence for the results table. */
 export const importFailureMessage = (detail: string | undefined) => failureMessages.find(([pattern]) => pattern.test(detail ?? ""))?.[1] ?? "This record could not be imported";
