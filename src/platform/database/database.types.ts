@@ -17,6 +17,7 @@ export type Database = {
       activity_events: {
         Row: {
           actor_membership_id: string | null
+          actor_type: string
           details: Json
           entity_id: string
           entity_type: string
@@ -28,6 +29,7 @@ export type Database = {
         }
         Insert: {
           actor_membership_id?: string | null
+          actor_type: string
           details?: Json
           entity_id: string
           entity_type: string
@@ -39,6 +41,7 @@ export type Database = {
         }
         Update: {
           actor_membership_id?: string | null
+          actor_type?: string
           details?: Json
           entity_id?: string
           entity_type?: string
@@ -249,6 +252,7 @@ export type Database = {
       campaign_activity_events: {
         Row: {
           actor_membership_id: string
+          actor_type: string
           campaign_id: string
           campaign_version_id: string | null
           event_type: string
@@ -260,6 +264,7 @@ export type Database = {
         }
         Insert: {
           actor_membership_id: string
+          actor_type: string
           campaign_id: string
           campaign_version_id?: string | null
           event_type: string
@@ -271,6 +276,7 @@ export type Database = {
         }
         Update: {
           actor_membership_id?: string
+          actor_type?: string
           campaign_id?: string
           campaign_version_id?: string | null
           event_type?: string
@@ -781,6 +787,55 @@ export type Database = {
           },
         ]
       }
+      mortgage_household_notes: {
+        Row: {
+          author_membership_id: string
+          body: string
+          created_at: string
+          household_id: string
+          id: string
+          organisation_id: string
+        }
+        Insert: {
+          author_membership_id: string
+          body: string
+          created_at?: string
+          household_id: string
+          id?: string
+          organisation_id: string
+        }
+        Update: {
+          author_membership_id?: string
+          body?: string
+          created_at?: string
+          household_id?: string
+          id?: string
+          organisation_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mortgage_household_notes_organisation_id_author_membership_fkey"
+            columns: ["organisation_id", "author_membership_id"]
+            isOneToOne: false
+            referencedRelation: "organisation_memberships"
+            referencedColumns: ["organisation_id", "id"]
+          },
+          {
+            foreignKeyName: "mortgage_household_notes_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mortgage_household_notes_organisation_id_household_id_fkey"
+            columns: ["organisation_id", "household_id"]
+            isOneToOne: false
+            referencedRelation: "mortgage_households"
+            referencedColumns: ["organisation_id", "id"]
+          },
+        ]
+      }
       mortgage_households: {
         Row: {
           created_at: string
@@ -990,6 +1045,7 @@ export type Database = {
           next_review_date: string | null
           organisation_id: string
           owner_membership_id: string
+          rate_type: string | null
           settlement_date: string | null
           source: string
           status: string
@@ -1009,6 +1065,7 @@ export type Database = {
           next_review_date?: string | null
           organisation_id: string
           owner_membership_id: string
+          rate_type?: string | null
           settlement_date?: string | null
           source: string
           status: string
@@ -1028,6 +1085,7 @@ export type Database = {
           next_review_date?: string | null
           organisation_id?: string
           owner_membership_id?: string
+          rate_type?: string | null
           settlement_date?: string | null
           source?: string
           status?: string
@@ -1059,6 +1117,7 @@ export type Database = {
           id: string
           name: string
           name_normalized: string
+          next_step: string | null
           organisation_id: string
           organisation_name: string | null
           organisation_name_normalized: string | null
@@ -1077,6 +1136,7 @@ export type Database = {
           id?: string
           name: string
           name_normalized: string
+          next_step?: string | null
           organisation_id: string
           organisation_name?: string | null
           organisation_name_normalized?: string | null
@@ -1095,6 +1155,7 @@ export type Database = {
           id?: string
           name?: string
           name_normalized?: string
+          next_step?: string | null
           organisation_id?: string
           organisation_name?: string | null
           organisation_name_normalized?: string | null
@@ -1329,6 +1390,7 @@ export type Database = {
           region: string | null
           short_name: string
           status: string
+          time_zone: string
           vertical_key: string
         }
         Insert: {
@@ -1338,6 +1400,7 @@ export type Database = {
           region?: string | null
           short_name: string
           status: string
+          time_zone?: string
           vertical_key: string
         }
         Update: {
@@ -1347,6 +1410,7 @@ export type Database = {
           region?: string | null
           short_name?: string
           status?: string
+          time_zone?: string
           vertical_key?: string
         }
         Relationships: []
@@ -1613,6 +1677,15 @@ export type Database = {
         }
         Returns: Json
       }
+      add_mortgage_household_note: {
+        Args: {
+          body: string
+          command_id: string
+          household_id: string
+          organisation_id: string
+        }
+        Returns: Json
+      }
       add_mortgage_minimal_loan_record: {
         Args: {
           command_id: string
@@ -1851,6 +1924,10 @@ export type Database = {
         }
         Returns: Json
       }
+      organisation_time_zone: {
+        Args: { p_organisation_id: string }
+        Returns: string
+      }
       preview_mortgage_manual_contact_duplicates: {
         Args: {
           p_email: string
@@ -1919,6 +1996,26 @@ export type Database = {
           command_id: string
           expected_version: number
           lead_id: string
+          organisation_id: string
+          referral_partner_id: string
+        }
+        Returns: Json
+      }
+      set_mortgage_loan_rate_type: {
+        Args: {
+          command_id: string
+          expected_version: number
+          loan_record_id: string
+          organisation_id: string
+          rate_type: string
+        }
+        Returns: Json
+      }
+      set_mortgage_referral_partner_next_step: {
+        Args: {
+          command_id: string
+          expected_version: number
+          next_step: string
           organisation_id: string
           referral_partner_id: string
         }
