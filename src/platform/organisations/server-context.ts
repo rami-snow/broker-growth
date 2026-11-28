@@ -35,14 +35,11 @@ export async function resolveActiveOrganisationContext(user: User) {
   return { memberships, activeMembership };
 }
 
-/**
- * The brokerage time zone (migration 20261128090100). Read through a membership-scoped RPC that is not yet in the
- * generated types; regenerate them with `pnpm db:types` after the migration and drop the cast.
- */
+/** The brokerage time zone (migration 20261128090100), read through a membership-scoped RPC. */
 async function readOrganisationTimeZone(organisationId: string) {
   const client = await createServerSupabaseClient();
-  const { data, error } = await client.rpc("organisation_time_zone" as never, { p_organisation_id: organisationId } as never);
+  const { data, error } = await client.rpc("organisation_time_zone", { p_organisation_id: organisationId });
   if (error) throw new Error(`Unable to read the brokerage time zone. Apply migration 20261128090100_brokerage_time_zone.sql: ${error.message}`);
   if (typeof data !== "string" || !data) throw new Error("The brokerage time zone is missing.");
-  return data as string;
+  return data;
 }

@@ -1,7 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/platform/database/database.types";
 import type { TenantContext } from "@/platform/core/models";
-import { untyped } from "./untyped";
 import { AUDIT_LIMIT, auditActorType, auditRecordLabel, type SettingsSnapshot } from "@/verticals/mortgage/settings/models";
 
 type Client = SupabaseClient<Database>;
@@ -37,7 +36,7 @@ export class SupabaseSettingsRepository {
       this.client.from("organisation_memberships").select("id,display_name,status").eq("organisation_id", organisationId),
       this.client.from("mortgage_membership_profiles").select("membership_id,position").eq("organisation_id", organisationId),
       this.client.from("membership_capabilities").select("membership_id,capability").eq("organisation_id", organisationId),
-      untyped(this.client).from("activity_events").select("id,occurred_at,actor_membership_id,actor_type,entity_type,summary").eq("organisation_id", organisationId).order("occurred_at", { ascending: false }).limit(AUDIT_LIMIT),
+      this.client.from("activity_events").select("id,occurred_at,actor_membership_id,actor_type,entity_type,summary").eq("organisation_id", organisationId).order("occurred_at", { ascending: false }).limit(AUDIT_LIMIT),
     ]);
     const error = [organisation.error, memberships.error, profiles.error, capabilities.error, activities.error].find(Boolean);
     if (error) throw new Error(`Unable to load settings: ${error.message}`);

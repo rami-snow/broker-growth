@@ -152,4 +152,4 @@ Both mortgage campaign purposes support the Email channel only. Eligibility is e
 
 ## ADR-037 — Brokerage time zone and temporary untyped reads
 
-Each organisation stores an IANA time zone (default Australia/Sydney). Database business dates, server-side parsing of datetime-local inputs, fixture review generation and every displayed time use it. Until the 4F.3 migrations are applied and `pnpm db:types` regenerates the types, the new columns are read through one documented untyped accessor at the persistence boundary rather than by hand-editing generated types.
+Each organisation stores an IANA time zone (default Australia/Sydney). Database business dates, server-side parsing of datetime-local inputs, fixture review generation and every displayed time use it. The 4F.3 migrations were applied to the development project and the types regenerated, so the new columns are read through the typed client.

@@ -1,4 +1,3 @@
-import { untyped } from "./untyped";
 import type { RateType } from "@/verticals/mortgage/loans/models";
 import type { ClientLoanInput, ClientOpportunityInput } from "@/verticals/mortgage/households/client-list";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -136,7 +135,7 @@ export class SupabaseClientBookRepository {
     if(householdIds&&!householdIds.length)return{loans:[],opportunities:[],members:[],households:[]};
     const scoped=<T extends {in:(column:string,values:string[])=>T}>(query:T,column:string)=>householdIds?query.in(column,householdIds):query;
     const [loans,opportunities,members,households]=await Promise.all([
-      (()=>{const query=untyped(this.client).from("mortgage_minimal_loan_records").select("household_id,lender_name,loan_purpose,rate_type,fixed_rate_expiry_date,status").eq("organisation_id",context.organisationId);return householdIds?query.in("household_id",householdIds):query;})(),
+      (()=>{const query=this.client.from("mortgage_minimal_loan_records").select("household_id,lender_name,loan_purpose,rate_type,fixed_rate_expiry_date,status").eq("organisation_id",context.organisationId);return householdIds?query.in("household_id",householdIds):query;})(),
       scoped(this.client.from("opportunities").select("subject_id,opportunity_type,trigger_date,lifecycle_status").eq("organisation_id",context.organisationId).eq("subject_type","mortgage.household"),"subject_id"),
       householdIds?Promise.resolve({data:[],error:null}):this.client.from("mortgage_household_members").select("household_id,contact_id").eq("organisation_id",context.organisationId),
       householdIds?Promise.resolve({data:[],error:null}):this.client.from("mortgage_households").select("id,status").eq("organisation_id",context.organisationId),
@@ -171,9 +170,9 @@ export class SupabaseClientBookRepository {
   async transitionHouseholdTask(context:TenantContext,input:{commandId:string;taskId:string;expectedVersion:number;targetStatus:"Completed"|"Cancelled"}){return this.operation("transition_mortgage_household_task",{organisation_id:context.organisationId,command_id:input.commandId,task_id:input.taskId,expected_version:input.expectedVersion,target_status:input.targetStatus});}
 
   /** 4F.3 (d): household notes, newest first. RLS requires mortgage.household.view. */
-  async householdNotes(context:TenantContext,householdId:string){const{data,error}=await untyped(this.client).from("mortgage_household_notes").select("id,body,author_membership_id,created_at").eq("organisation_id",context.organisationId).eq("household_id",householdId).order("created_at",{ascending:false}).limit(100);if(error)throw new Error(`Unable to load household notes: ${error.message}`);return (data??[]) as Array<{id:string;body:string;author_membership_id:string;created_at:string}>;}
+  async householdNotes(context:TenantContext,householdId:string){const{data,error}=await this.client.from("mortgage_household_notes").select("id,body,author_membership_id,created_at").eq("organisation_id",context.organisationId).eq("household_id",householdId).order("created_at",{ascending:false}).limit(100);if(error)throw new Error(`Unable to load household notes: ${error.message}`);return (data??[]) as Array<{id:string;body:string;author_membership_id:string;created_at:string}>;}
   /** 4F.3 (e): rate types for one household's loans. */
-  async loanRateTypes(context:TenantContext,householdId:string){const{data,error}=await untyped(this.client).from("mortgage_minimal_loan_records").select("id,rate_type").eq("organisation_id",context.organisationId).eq("household_id",householdId);if(error)throw new Error(`Unable to load loan rate types: ${error.message}`);return new Map<string,RateType|undefined>(((data??[]) as Array<{id:string;rate_type:string|null}>).map(row=>[row.id,rateTypeOrUndefined(row.rate_type)]));}
+  async loanRateTypes(context:TenantContext,householdId:string){const{data,error}=await this.client.from("mortgage_minimal_loan_records").select("id,rate_type").eq("organisation_id",context.organisationId).eq("household_id",householdId);if(error)throw new Error(`Unable to load loan rate types: ${error.message}`);return new Map<string,RateType|undefined>(((data??[]) as Array<{id:string;rate_type:string|null}>).map(row=>[row.id,rateTypeOrUndefined(row.rate_type)]));}
   async addHouseholdNote(context:TenantContext,input:{commandId:string;householdId:string;body:string}){return this.operation("add_mortgage_household_note",{organisation_id:context.organisationId,command_id:input.commandId,household_id:input.householdId,body:input.body});}
   async setLoanRateType(context:TenantContext,input:{commandId:string;loanRecordId:string;expectedVersion:number;rateType:string}){return this.operation("set_mortgage_loan_rate_type",{organisation_id:context.organisationId,command_id:input.commandId,loan_record_id:input.loanRecordId,expected_version:input.expectedVersion,rate_type:input.rateType});}
   private async operation(name:string,args:Record<string,string|number|boolean|null>){const{data,error}=await this.client.rpc(name as never,args as never);if(error)throw operationError(error.message);return object(data as Json);}

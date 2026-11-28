@@ -48,9 +48,8 @@ migration rolls back; do not edit rows by hand — report the error.
 pnpm db:types
 ```
 
-Then commit `src/platform/database/database.types.ts`. After that, the temporary untyped reads in
-`src/verticals/mortgage/persistence/untyped.ts` and the `as never` RPC casts for the new functions
-can be switched to typed calls (a small follow-up change).
+Then commit `src/platform/database/database.types.ts`. The app reads the new columns through these
+generated types.
 
 ## 4. Run the verification suites
 
