@@ -16,8 +16,9 @@ export interface MortgageCampaignCandidateData{organisation:Organisation;househo
 
 const sharedFields=["contact.firstName","household.displayName","brokerage.name","broker.displayName","review.dueDate","loan.lenderName"] as const;
 export const mortgageCampaignPurposes=[
-  {key:annualReviewPurposeKey,verticalKey:"mortgage",displayName:"Annual review reminder",description:"Invite eligible clients to arrange their annual review.",supportedChannels:["Email","SMS"],audienceSourceKeys:[annualReviewSourceKey],permittedMergeFields:sharedFields},
-  {key:fixedExpiryPurposeKey,verticalKey:"mortgage",displayName:"Fixed-rate expiry review reminder",description:"Invite eligible clients to discuss an approaching fixed-rate expiry.",supportedChannels:["Email","SMS"],audienceSourceKeys:[fixedExpirySourceKey],permittedMergeFields:[...sharedFields,"loan.fixedRateExpiryDate"]},
+  // Phase 1 campaigns are email only. SMS consent is still recorded on leads and clients.
+  {key:annualReviewPurposeKey,verticalKey:"mortgage",displayName:"Annual review reminder",description:"Invite eligible clients to arrange their annual review.",supportedChannels:["Email"],audienceSourceKeys:[annualReviewSourceKey],permittedMergeFields:sharedFields},
+  {key:fixedExpiryPurposeKey,verticalKey:"mortgage",displayName:"Fixed-rate expiry review reminder",description:"Invite eligible clients to discuss an approaching fixed-rate expiry.",supportedChannels:["Email"],audienceSourceKeys:[fixedExpirySourceKey],permittedMergeFields:[...sharedFields,"loan.fixedRateExpiryDate"]},
 ]as const satisfies readonly CampaignPurposeDefinition[];
 export const mortgageAudienceSources=[
   {key:annualReviewSourceKey,verticalKey:"mortgage",displayName:"Annual review opportunities",subjectType:"mortgage.review-opportunity"},

@@ -17,7 +17,7 @@ describe("Milestone 3 campaign UI",()=>{
     wrap(<CampaignsScreen/>);
     expect(screen.getByRole("heading",{name:"Campaigns"})).toBeVisible();
     expect(screen.getByRole("row",{name:/Annual review outreach plan/})).toBeVisible();
-    expect(screen.getByRole("row",{name:/Fixed expiry SMS review/})).toBeVisible();
+    expect(screen.getByRole("row",{name:/Fixed-rate expiry check-in/})).toBeVisible();
     expect(screen.getByText(/never sends, schedules, queues or exports/i)).toBeVisible();
   });
 

@@ -43,8 +43,9 @@ describe("Campaign review panel (frame 06)", () => {
     const panel = screen.getByRole("complementary", { name: "Campaign review" });
     expect(within(panel).getByText("Not scheduled")).toBeVisible();
     expect(screen.getByText(/never sends, schedules, queues or exports/)).toBeVisible();
+    expect(within(panel).getByText("Email draft")).toBeVisible();
+    expect(within(panel).getByText(/Eligible \(Email consent recorded\)/)).toBeVisible();
     fireEvent.click(within(panel).getByRole("button", { name: "Approve plan" }));
-    if (!within(panel).queryByText(/Plan approved/)) fireEvent.click(within(panel).getByRole("button", { name: "Approve plan" }));
     expect(within(panel).getByText("Plan approved. Nothing was sent or scheduled.")).toBeVisible();
     expect(screen.queryByRole("button", { name: /send|schedule|export/i })).not.toBeInTheDocument();
   });

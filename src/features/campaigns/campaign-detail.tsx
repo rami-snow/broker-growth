@@ -42,7 +42,7 @@ function CampaignDetailContent({ campaignId }: { campaignId: string }) {
   const versions = campaignRepo.listVersions(context, campaign.id), activity = campaignRepo.listActivity(context, campaign.id), approvals = campaignRepo.listApprovals(context, campaign.id);
   const latest = campaignRepo.latestSnapshot(context, campaign.id), submission = campaignRepo.latestSnapshot(context, campaign.id, "Submission");
   const [name, setName] = useState(campaign.name);
-  const [channel, setChannel] = useState<CampaignChannel>(version.content.channel);
+  const channel: CampaignChannel = version.content.channel;
   const [subject, setSubject] = useState(version.content.subject ?? "");
   const [body, setBody] = useState(version.content.body);
   const [selectedFields, setSelectedFields] = useState<string[]>(version.content.selectedMergeFieldKeys);
@@ -78,9 +78,9 @@ function CampaignDetailContent({ campaignId }: { campaignId: string }) {
           <div className="section-heading"><div><h2>Content plan</h2><p>Plain text only. Starter copy is fictional and is not legally approved wording.</p></div><Badge>{channel}</Badge></div>
           {campaign.status === "Draft" ? <div className="form-grid">
             <TextField label="Campaign name" value={name} onChange={event => setName(event.target.value)}/>
-            <Select label="Channel" value={channel} onChange={event => setChannel(event.target.value as CampaignChannel)} options={purpose.supportedChannels.map(value => ({ value, label: value }))}/>
+            <p className="form-guidance">Channel: Email. Campaigns are email only in phase 1.</p>
             {channel === "Email" && <div className="form-wide"><TextField label="Email subject" value={subject} onChange={event => setSubject(event.target.value)}/></div>}
-            <div className="form-wide"><TextArea label="Message body" value={body} onChange={event => setBody(event.target.value)}/>{channel === "SMS" && <small className="character-count">{body.length} characters</small>}</div>
+            <div className="form-wide"><TextArea label="Message body" value={body} onChange={event => setBody(event.target.value)}/></div>
             <fieldset className="merge-fields form-wide"><legend>Permitted merge fields</legend>{purpose.permittedMergeFields.map(key => { const definition = allFields.find(item => item.key === key)!; return <label key={key}><input type="checkbox" checked={selectedFields.includes(key)} onChange={event => setSelectedFields(current => event.target.checked ? [...current, key] : current.filter(item => item !== key))}/><span>{definition.displayName}</span><code>{`{{${key}}}`}</code></label>; })}</fieldset>
             <div className="placeholder-note form-wide"><strong>Required planning placeholders</strong><span>[Sender identification] and [Unsubscribe instructions] remain visible placeholders. This prototype does not validate final legal wording.</span></div>
           </div> : <div className="content-readonly">{channel === "Email" && <p><strong>Subject</strong><span>{version.content.subject}</span></p>}<p><strong>Message</strong><span className="preline">{version.content.body}</span></p><p><strong>Selected merge fields</strong><span>{version.content.selectedMergeFieldKeys.join(", ") || "None"}</span></p></div>}

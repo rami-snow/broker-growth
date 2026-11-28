@@ -56,7 +56,7 @@ Annual-review opportunities enter the 30-day window as Upcoming (8–30 days), D
 ## Milestone 3
 
 - Searchable campaign plans for annual-review and fixed-rate-expiry opportunities
-- Email subject/body and SMS body planning with fictional starter copy
+- Email subject and body planning with fictional starter copy (phase 1 campaigns are email only; SMS consent is still recorded on leads and clients)
 - Explicitly permitted merge fields and resolved fictional sample previews
 - Primary-contact-only, opportunity-backed audience previews
 - Explainable eligible/excluded decisions with masked destinations

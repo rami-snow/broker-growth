@@ -145,3 +145,7 @@ Production Supabase project configuration, invitation operations, MFA/recovery p
 ## ADR-035 — One shell and shared screen views across runtimes
 
 Milestone 4F.2 aligns the UI to the Figma desktop screens. Fixture and Supabase modes now render the same sidebar, top bar and command bar, and each list or detail screen uses one presentational view fed by the runtime's existing repository snapshot. Runtime components keep their own permission checks, modals and command boundaries, so persistence and authorisation are unchanged. Display rules that are business rules (response clock, client retention projection, partner relationship status) live in the mortgage vertical with tests. Phase 1 is desktop only; mobile e2e checks were removed with that scope decision.
+
+## ADR-036 — Email-only campaigns in phase 1
+
+Both mortgage campaign purposes support the Email channel only. Eligibility is email consent with status Recorded that has not been withdrawn, after suppression checks. The platform channel type and the database keep SMS so that consent recording on leads and clients is unchanged and no migration is needed; a separate marketing consent channel is not introduced.
