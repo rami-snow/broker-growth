@@ -87,7 +87,7 @@ test("qualified lead converts atomically into a joint client and review opportun
   await reviewRow.getByRole("button",{name:"Manage"}).click();
   await page.getByLabel("Assign to").selectOption("mem_h_broker1");
   await page.getByLabel("Opportunity action").selectOption("Due");
-  await page.getByRole("button",{name:"Save"}).click();
+  await page.getByRole("button",{name:"Save",exact:true}).click();
   await expect(reviewRow.getByText("Due")).toBeVisible();
 
   await page.getByRole("link",{name:"Today"}).click();
