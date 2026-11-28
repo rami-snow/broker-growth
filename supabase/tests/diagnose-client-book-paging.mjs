@@ -37,6 +37,20 @@ ${setupData}
 update step_timing set finished = clock_timestamp() where step = 'setup data';
 `;
 
+// EXPLAIN mode: show the planner's plan (not executed) for the duplicate preview's query body, as the test user.
+if (process.env.EXPLAIN_DUPLICATES) {
+  const migrations = new URL("../migrations/20261117014340_harden_client_book_conversion_and_reads.sql", import.meta.url);
+  const sql = readFileSync(migrations, "utf8");
+  const start = sql.indexOf("create or replace function public.find_mortgage_lead_household_duplicates(");
+  const bodyStart = sql.indexOf("as $$", start) + 5, bodyEnd = sql.indexOf("$$;", bodyStart);
+  const body = sql.slice(bodyStart, bodyEnd).replaceAll("p_organisation_id", "'10000000-0000-0000-0000-000000000001'::uuid").replaceAll("p_lead_id", "'4c120001-0000-4000-8000-000000000099'::uuid");
+  const file = join(mkdtempSync(join(tmpdir(), "bgd-paging-explain-")), "explain.sql");
+  writeFileSync(file, `${prelude}set local role authenticated;\nexplain (costs on, verbose off) ${body};\nreset role;\nrollback;\n`, { mode: 0o600 });
+  if (process.env.DRY_RUN) { console.log(readFileSync(file, "utf8")); process.exit(0); }
+  execFileSync("pnpm", ["exec", "supabase", "db", "query", "--remote=fgqgcikmaccjamwocpat", "--file", file, "--yes"], { stdio: "inherit" });
+  process.exit(0);
+}
+
 const variants = [["setup only", []], ...checks.map((line, index) => [`setup + check ${index + 1}`, index > 0 && line.includes("paging_result") ? [checks[0], line] : [line]])];
 const directory = mkdtempSync(join(tmpdir(), "bgd-paging-diagnosis-"));
 try {

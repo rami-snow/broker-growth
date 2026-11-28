@@ -19,6 +19,7 @@
     "db:test:hosted-operations-cli": "supabase db query --remote=fgqgcikmaccjamwocpat --file supabase/tests/hosted-lead-operations-cli.sql --yes",
     "db:test:hosted-client-book": "node supabase/tests/hosted-client-book-runner.mjs",
     "db:diagnose:client-book-paging": "node supabase/tests/diagnose-client-book-paging.mjs",
+    "db:diagnose:duplicate-plan": "EXPLAIN_DUPLICATES=1 node supabase/tests/diagnose-client-book-paging.mjs",
     "db:test:hosted-review": "node supabase/tests/hosted-review-operations.mjs",
     "db:test:hosted-review-cli": "supabase db query --remote=fgqgcikmaccjamwocpat --file supabase/tests/hosted-review-operations-cli.sql --yes",
     "db:test:hosted-maintenance": "supabase db query --remote=fgqgcikmaccjamwocpat --file supabase/tests/hosted-client-maintenance-operations.sql --yes",
