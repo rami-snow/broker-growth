@@ -1,5 +1,6 @@
 "use client";
 
+import { useTimeZone, useZonedFormat } from "@/components/time-zone";
 import { zonedLocalToIso } from "@/platform/time/zoned";
 import Link from "next/link";
 import { useState } from "react";
@@ -15,7 +16,6 @@ import type { ContactId } from "@/platform/contacts/models";
 import { hasCapability } from "@/verticals/mortgage/permissions";
 
 const statusTone = (status: CampaignStatus) => status === "Approved" ? "success" : status === "Rejected" || status === "Cancelled" ? "danger" : status === "Ready for review" ? "warning" : "neutral";
-const format = (value: string) => new Intl.DateTimeFormat("en-AU", { dateStyle: "medium", timeStyle: "short", timeZone: "Australia/Sydney" }).format(new Date(value));
 const resolveCopy = (value: string, fields: Record<string, string | number | boolean | null>) => value.replace(/\{\{\s*([a-z0-9._-]+)\s*\}\}/gi, (_, key: string) => String(fields[key] ?? `[Unresolved: ${key}]`));
 
 export function CampaignDetail({ campaignId }: { campaignId: string }) {
@@ -27,7 +27,7 @@ export function CampaignDetail({ campaignId }: { campaignId: string }) {
   return <CampaignDetailContent campaignId={campaignId}/>;
 }
 
-function CampaignDetailContent({ campaignId }: { campaignId: string }) {
+function CampaignDetailContent({ campaignId }: { campaignId: string }) {const {dateTime:format}=useZonedFormat();
   const { repo, campaignRepo, context, revision, mutate } = usePrototype();
   void revision;
   const [message, setMessage] = useState("");
@@ -114,7 +114,7 @@ function CampaignDetailContent({ campaignId }: { campaignId: string }) {
   </>;
 }
 
-function ConsentChangeModal({ campaignId, recipients, onClose }: { campaignId: CampaignId; recipients: Array<{ contactId: ContactId; subjectDisplayName: string }>; onClose: () => void }) {
+function ConsentChangeModal({ campaignId, recipients, onClose }: { campaignId: CampaignId; recipients: Array<{ contactId: ContactId; subjectDisplayName: string }>; onClose: () => void }) {const timeZone=useTimeZone();
   const { campaignRepo, context, mutate } = usePrototype();
   const [error, setError] = useState("");
   const unique = Array.from(new Map(recipients.map(item => [item.contactId, item])).values());
@@ -122,7 +122,7 @@ function ConsentChangeModal({ campaignId, recipients, onClose }: { campaignId: C
     <form className="form-grid single" action={form => {
       try {
         const data = Object.fromEntries(form.entries()) as Record<string, string>;
-        mutate(() => campaignRepo.recordExternalConsentChange(context, campaignId, { contactId: data.contactId as ContactId, channel: data.channel as CampaignChannel, status: data.status as ConsentChannelStatus, source: data.source, effectiveAt: zonedLocalToIso(data.effectiveAt), reason: data.reason, externalActionConfirmed: data.externalActionConfirmed === "on" }));
+        mutate(() => campaignRepo.recordExternalConsentChange(context, campaignId, { contactId: data.contactId as ContactId, channel: data.channel as CampaignChannel, status: data.status as ConsentChannelStatus, source: data.source, effectiveAt: zonedLocalToIso(data.effectiveAt, timeZone), reason: data.reason, externalActionConfirmed: data.externalActionConfirmed === "on" }));
         onClose();
       } catch (cause) { setError(cause instanceof Error ? cause.message : "Consent change could not be recorded"); }
     }}>

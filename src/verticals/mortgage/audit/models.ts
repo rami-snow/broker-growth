@@ -11,6 +11,9 @@ export type MortgageActivityType = SharedActivityType
   | "loan.updated"
   | "opportunity.generated"
   | "opportunity.assigned"
-  | "opportunity.status_changed";
+  | "opportunity.status_changed"
+  | "household.note_added"
+  | "loan.rate_type_set"
+  | "referral_partner.next_step_set";
 
 export type MortgageActivityEvent = ActivityEvent<MortgageActivityType>;

@@ -29,7 +29,7 @@ export class InMemoryOperationsRepository {
   listActivity(context: TenantContext, leadId: LeadId) { this.getLead(context, leadId); return this.state.activities.filter(e => e.organisationId === context.organisationId && e.leadId === leadId).sort((a,b) => b.occurredAt.localeCompare(a.occurredAt)); }
   appendActivity(context: TenantContext, event: Omit<ActivityEvent, "id" | "organisationId" | "actorMembershipId" | "occurredAt">) {
     const actor = this.membership(context);
-    const activity = { ...event, id: id("evt"), organisationId: context.organisationId, actorMembershipId: actor.id, occurredAt: this.now().toISOString() } as ActivityEvent;
+    const activity = { ...event, id: id("evt"), organisationId: context.organisationId, actorMembershipId: actor.id, actorType: "person", occurredAt: this.now().toISOString() } as ActivityEvent;
     this.state.activities.push(activity); return activity;
   }
   createLead(context: TenantContext, input: NewMortgageLeadInput) {

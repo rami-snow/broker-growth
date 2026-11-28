@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { PrototypeProvider } from "@/components/prototype-provider";
 import { ClientBookScreen } from "./client-book-screen";
@@ -41,5 +41,36 @@ describe("Partners top bar and Reports placeholder", () => {
     render(<FutureScreen title="Reports" heading="Reports are coming" body="They will show response times, conversion and lead sources."/>);
     expect(screen.getByText("Reports are coming")).toBeVisible();
     expect(screen.queryByText(/Milestone 1/)).not.toBeInTheDocument();
+  });
+});
+
+describe("4F.3 screens", () => {
+  it("labels the loan column Rate type and shows Fixed, Variable or Split", async () => {
+    wrap(<ClientBookScreen/>);
+    expect(screen.getByRole("columnheader", { name: "Rate type" })).toBeVisible();
+    expect(screen.queryByRole("columnheader", { name: "Loan purpose" })).not.toBeInTheDocument();
+    const cells = Array.from(document.querySelectorAll("tbody tr td:nth-child(2)")).map(cell => cell.textContent);
+    expect(cells.every(text => ["Fixed", "Variable", "Split", "Not recorded", "—"].includes(text ?? ""))).toBe(true);
+    expect(screen.getByText("Loan records hold lender, rate type and fixed-rate expiry date only")).toBeVisible();
+  });
+  it("adds a household note from the client detail", async () => {
+    const { ClientDetail } = await import("./client-detail");
+    wrap(<ClientDetail householdId="household_001"/>);
+    expect(screen.getByText(/Prefers a call after 5 pm/)).toBeVisible();
+    fireEvent.change(screen.getByLabelText("Add a household note"), { target: { value: "Asked for the review in December." } });
+    fireEvent.click(within(screen.getByRole("region", { name: "Notes" })).getByRole("button", { name: "Add note" }));
+    const notesRegion = screen.getByRole("region", { name: "Notes" });
+    expect(notesRegion.querySelectorAll(".record-row")).toHaveLength(2);
+    expect(notesRegion.querySelector(".record-row")).toHaveTextContent("Asked for the review in December.");
+    await waitFor(() => expect(screen.getByLabelText("Add a household note")).toHaveValue(""));
+    expect(screen.getAllByText("Household note added").length).toBeGreaterThan(0);
+  });
+  it("shows and edits a partner next step", async () => {
+    const { ReferralPartnerFixtureDetail } = await import("@/features/referrals/referral-partner-fixture-detail");
+    wrap(<ReferralPartnerFixtureDetail referralPartnerId="referral_harbour_conveyancing"/>);
+    fireEvent.change(screen.getByLabelText("Next step"), { target: { value: "Invite to client event" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save next step" }));
+    expect(screen.getByLabelText("Next step")).toHaveValue("Invite to client event");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });

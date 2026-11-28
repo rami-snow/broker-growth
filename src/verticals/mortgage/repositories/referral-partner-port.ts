@@ -7,7 +7,7 @@ export interface ReferralPartnerListQuery {
 export interface ReferralPartnerSummary {
   id:string; name:string; organisationName?:string; type:MortgageReferralPartnerType;
   email?:string; phone?:string; ownerMembershipId:string; ownerName:string;
-  status:"Active"|"Inactive"; version:number; createdAt:string; updatedAt:string;
+  status:"Active"|"Inactive"; nextStep?:string; version:number; createdAt:string; updatedAt:string;
 }
 export interface ReferralPartnerListSnapshot {
   rows:ReferralPartnerSummary[]; total:number; page:number; pageSize:number;

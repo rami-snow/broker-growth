@@ -12,6 +12,6 @@ export default async function Page() {
   const { user, activeMembership, context, repository } = await persistentOperationsContext();
   const clientBook = new SupabaseClientBookRepository(await createServerSupabaseClient());
   const [snapshot, retention] = await Promise.all([repository.readSnapshot(context), clientBook.retentionToday(context)]);
-  const model = buildPersistentTodayModel(snapshot, retention, activeMembership.displayName, new Date());
+  const model = buildPersistentTodayModel(snapshot, retention, activeMembership.displayName, new Date(), activeMembership.organisation.timeZone);
   return <SupabaseWorkspace user={user} returnPath="/today/needs-action"><NeedsActionView items={model.needsAction}/></SupabaseWorkspace>;
 }

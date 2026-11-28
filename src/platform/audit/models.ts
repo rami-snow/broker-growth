@@ -8,6 +8,9 @@ export const contactOutcomes = ["No answer", "Left message", "Spoke with lead", 
 export type ContactOutcome = (typeof contactOutcomes)[number];
 export interface ContactAttemptInput { channel:ContactChannel; outcome:ContactOutcome; note?:string; nextActionAt?:string; }
 export type SharedActivityType = "lead.created" | "lead.assigned" | "lead.claimed" | "lead.status_changed" | "lead.next_action_changed" | "contact.attempted" | "note.added" | "task.created" | "appointment.created";
+/** Who caused an audit entry. Phase 2 can add an AI actor here without migrating existing entries. */
+export const auditActorTypes = ["person", "system", "import"] as const;
+export type AuditActorType = (typeof auditActorTypes)[number];
 export interface ActivityEvent<TType extends string = SharedActivityType> {
   id: ActivityEventId;
   organisationId: OrganisationId;
@@ -15,6 +18,8 @@ export interface ActivityEvent<TType extends string = SharedActivityType> {
   subjectReference?: { type: string; id: string };
   opportunityId?: string;
   actorMembershipId: MembershipId;
+  /** Absent on legacy fixture entries; treated as "person" when a member is present, otherwise "system". */
+  actorType?: AuditActorType;
   occurredAt: string;
   type: TType;
   summary: string;

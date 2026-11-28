@@ -6,6 +6,7 @@ import { requireVerifiedCurrentUser } from "@/platform/auth/current-user";
 import { resolveActiveOrganisationContext } from "@/platform/organisations/server-context";
 import type { TenantContext, UserId } from "@/platform/core/models";
 import { SupabaseReferralPartnerRepository } from "@/verticals/mortgage/persistence/supabase-referral-partner-repository";
+import { normaliseNextStep } from "@/verticals/mortgage/referrals/models";
 import { mortgageReferralPartnerTypes } from "@/verticals/mortgage/referrals/models";
 import type { ReferralDuplicateMatch } from "@/verticals/mortgage/repositories/referral-partner-port";
 
@@ -22,6 +23,7 @@ export async function runReferralPartnerAction(_state:ReferralActionState,data:F
     else if(operation==="update")result=await repository.update(context,{commandId,referralPartnerId:uuid(data,"referralPartnerId"),expectedVersion:positiveInteger(data,"expectedVersion"),name:required(data,"name"),organisationName:optional(data,"organisationName"),type:oneOf(data,"type",mortgageReferralPartnerTypes),email:optional(data,"email"),phone:optional(data,"phone")});
     else if(operation==="assign")result=await repository.assign(context,{commandId,referralPartnerId:uuid(data,"referralPartnerId"),expectedVersion:positiveInteger(data,"expectedVersion"),targetMembershipId:uuid(data,"targetMembershipId")});
     else if(operation==="transition")result=await repository.transition(context,{commandId,referralPartnerId:uuid(data,"referralPartnerId"),expectedVersion:positiveInteger(data,"expectedVersion"),targetStatus:oneOf(data,"targetStatus",["Active","Inactive"] as const)});
+    else if(operation==="next-step")result=await repository.setNextStep(context,{commandId,referralPartnerId:uuid(data,"referralPartnerId"),expectedVersion:positiveInteger(data,"expectedVersion"),nextStep:normaliseNextStep(optional(data,"nextStep"))});
     else throw new Error("Choose a valid referral-partner action.");
     const referralPartnerId=String(result.referralPartnerId??id??"");revalidatePath("/referral-partners");if(referralPartnerId)revalidatePath(`/referral-partners/${referralPartnerId}`);revalidatePath("/leads");revalidatePath("/client-book");return{ok:true,message:"Referral partner saved",referralPartnerId};
   }catch(cause){return{ok:false,message:error(cause)};}

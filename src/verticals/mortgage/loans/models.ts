@@ -9,5 +9,10 @@ export const loanRecordSources=["Lead conversion","Manual entry","Imported fixtu
 export type LoanRecordSource=(typeof loanRecordSources)[number];
 export const dataConfidences=["Confirmed","Unverified"]as const;
 export type DataConfidence=(typeof dataConfidences)[number];
-export interface MinimalLoanRecord{id:MinimalLoanRecordId;organisationId:OrganisationId;householdId:HouseholdId;ownerMembershipId:MembershipId;externalReference?:string;lenderName:string;loanPurpose:LoanPurpose;settlementDate:string;fixedRateExpiryDate?:string;lastReviewDate?:string;nextReviewDate?:string;status:LoanRecordStatus;source:LoanRecordSource;dataConfidence:DataConfidence;createdAt:string;updatedAt:string;version:number;}
+/** Rate type only: no rate value, balance or amount is ever stored. */
+export const rateTypes=["Fixed","Variable","Split"]as const;
+export type RateType=(typeof rateTypes)[number];
+/** A variable loan cannot carry a fixed-rate expiry date; Fixed and Split can. */
+export function assertRateTypeConsistent(rateType:RateType,fixedRateExpiryDate?:string){if(!rateTypes.includes(rateType))throw new Error("Choose Fixed, Variable or Split.");if(rateType==="Variable"&&fixedRateExpiryDate)throw new Error("A variable loan cannot have a fixed-rate expiry date. Clear the date first.");}
+export interface MinimalLoanRecord{id:MinimalLoanRecordId;organisationId:OrganisationId;householdId:HouseholdId;ownerMembershipId:MembershipId;externalReference?:string;lenderName:string;loanPurpose:LoanPurpose;settlementDate:string;fixedRateExpiryDate?:string;rateType?:RateType;lastReviewDate?:string;nextReviewDate?:string;status:LoanRecordStatus;source:LoanRecordSource;dataConfidence:DataConfidence;createdAt:string;updatedAt:string;version:number;}
 export interface NewLoanInput extends Omit<MinimalLoanRecord,"id"|"organisationId"|"createdAt"|"updatedAt"|"version"|"source">{source?:LoanRecordSource;}

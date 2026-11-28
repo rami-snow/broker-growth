@@ -4,6 +4,7 @@ import { PageTitle } from "@/components/page-title";
 import { Badge, Button, Table } from "@/components/ui";
 import { usePrototype } from "@/components/prototype-provider";
 import { useUrlParam } from "@/components/use-url-param";
+import { useTimeZone } from "@/components/time-zone";
 import { formatDayMonth, formatTime } from "@/features/today/today-model";
 import { AUDIT_LIMIT, auditActorType, auditRecordLabel, type SettingsAuditEntry, type SettingsSnapshot } from "@/verticals/mortgage/settings/models";
 
@@ -23,7 +24,7 @@ export function SettingsScreen() {
   const memberName = (id?: string) => members.find(item => item.id === id)?.displayName;
   const leadName = (id?: string) => { const lead = state.leads.find(item => item.id === id); return lead ? `${lead.firstName} ${lead.lastName}` : undefined; };
   const audit: SettingsAuditEntry[] = [
-    ...state.activities.filter(item => item.organisationId === context.organisationId).map(event => ({ id: event.id, occurredAt: event.occurredAt, actorType: auditActorType(event.actorMembershipId), actorName: memberName(event.actorMembershipId), record: leadName(event.leadId) ?? (event.subjectReference ? auditRecordLabel(event.subjectReference.type) : undefined), summary: event.summary })),
+    ...state.activities.filter(item => item.organisationId === context.organisationId).map(event => ({ id: event.id, occurredAt: event.occurredAt, actorType: auditActorType(event.actorMembershipId, event.actorType), actorName: memberName(event.actorMembershipId), record: leadName(event.leadId) ?? (event.subjectReference ? auditRecordLabel(event.subjectReference.type) : undefined), summary: event.summary })),
     ...state.campaignActivities.filter(item => item.organisationId === context.organisationId).map(event => ({ id: event.id, occurredAt: event.occurredAt, actorType: auditActorType(event.actorMembershipId), actorName: memberName(event.actorMembershipId), record: "Campaign", summary: event.summary ?? event.type })),
   ].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt)).slice(0, AUDIT_LIMIT);
   return <SettingsView snapshot={{ brokerage: { name: brokerage.name, region: brokerage.region }, currentMembershipId: membership.id, members: members.map(item => ({ id: item.id, name: item.displayName, position: item.mortgageProfile.position, status: item.status, capabilities: item.capabilities })), audit }}/>;
@@ -31,6 +32,7 @@ export function SettingsScreen() {
 
 /** Settings (Figma frame 08), shared by both runtimes. Phase 1 data sources: CSV import only; other sources are shown as Coming later. */
 export function SettingsView({ snapshot }: { snapshot: SettingsSnapshot }) {
+  const timeZone = useTimeZone();
   const requested = useUrlParam("tab"), [manualTab, setTab] = useState<TabKey | null>(null);
   const tab: TabKey = manualTab ?? (tabs.some(item => item.key === requested) ? requested as TabKey : "brokerage");
   const { brokerage, members, audit } = snapshot, current = members.find(item => item.id === snapshot.currentMembershipId);
@@ -48,9 +50,9 @@ export function SettingsView({ snapshot }: { snapshot: SettingsSnapshot }) {
           <tr><td>Broker CRM</td><td className="muted">Direct connection, for example Salestrekker or Mercury Nexus</td><td><Badge>Coming later</Badge></td></tr>
           <tr><td>Website enquiry form</td><td className="muted">New leads as they arrive</td><td><Badge>Coming later</Badge></td></tr>
         </tbody></Table>
-        <div className="card card__body"><h2>How importing works</h2><ul className="bullets"><li>Records are matched on email or phone, so running an import again never creates duplicates.</li><li>Every imported change appears in the audit log with the actor “import”, not a person.</li><li>Loan records stay minimal: lender, loan purpose and fixed-rate expiry date. Rates, balances and loan amounts are never imported.</li><li>The CSV import screen arrives with milestone 4F.3.</li></ul></div></section>}
+        <div className="card card__body"><h2>How importing works</h2><ul className="bullets"><li>Records are matched on email or phone, so running an import again never creates duplicates.</li><li>Every imported change appears in the audit log with the actor “import”, not a person.</li><li>Loan records stay minimal: lender, rate type and fixed-rate expiry date. Rates, balances and loan amounts are never imported.</li><li>The CSV import screen arrives with milestone 4F.3.</li></ul></div></section>}
       {tab === "consent" && <section className="settings-section"><p>Consent is recorded per channel. An email address or phone number never implies consent.</p><Table><thead><tr><th>Status</th><th>Meaning</th></tr></thead><tbody><tr><td><Badge tone="success">Recorded</Badge></td><td>Evidence of consent was supplied, with its source and time.</td></tr><tr><td><Badge tone="warning">Not recorded</Badge></td><td>No evidence on file. Treated as no consent.</td></tr><tr><td><Badge tone="danger">Opted out</Badge></td><td>The person withdrew consent. Reinstating needs new external evidence.</td></tr></tbody></Table><div className="prototype-warning"><span>Nothing is sent from Broker Growth Desk in phase 1. A legal review of the Spam Act 2003, Privacy Act 1988 and NCCP obligations is required before any real outreach. These summaries are not legal advice.</span></div></section>}
-      {tab === "audit" && <section className="settings-section"><p>Every change is recorded here, newest first (latest {AUDIT_LIMIT}). Entries cannot be edited or deleted.</p><Table><thead><tr><th>When</th><th>Actor</th><th>Record</th><th>Change</th></tr></thead><tbody>{audit.map(event => <tr key={event.id}><td className="mono"><small>{formatDayMonth(event.occurredAt)}, {formatTime(event.occurredAt)}</small></td><td>{event.actorName ?? (event.actorType === "Person" ? "Unknown member" : event.actorType)}<small>{event.actorType}</small></td><td>{event.record ?? "—"}</td><td>{event.summary}</td></tr>)}{!audit.length && <tr><td colSpan={4} className="muted">No audit entries yet.</td></tr>}</tbody></Table></section>}
+      {tab === "audit" && <section className="settings-section"><p>Every change is recorded here, newest first (latest {AUDIT_LIMIT}). Entries cannot be edited or deleted.</p><Table><thead><tr><th>When</th><th>Actor</th><th>Record</th><th>Change</th></tr></thead><tbody>{audit.map(event => <tr key={event.id}><td className="mono"><small>{formatDayMonth(event.occurredAt, timeZone)}, {formatTime(event.occurredAt, timeZone)}</small></td><td>{event.actorName ?? (event.actorType === "Person" ? "Unknown member" : event.actorType)}<small>{event.actorType}</small></td><td>{event.record ?? "—"}</td><td>{event.summary}</td></tr>)}{!audit.length && <tr><td colSpan={4} className="muted">No audit entries yet.</td></tr>}</tbody></Table></section>}
     </div>
   </div>;
 }

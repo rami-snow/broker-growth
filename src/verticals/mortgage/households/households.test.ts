@@ -2,7 +2,7 @@ import { describe,expect,it } from "vitest";
 import { createFixtureState } from "@/verticals/mortgage/fixtures";
 import { InMemoryClientBookRepository } from "@/verticals/mortgage/repositories/client-book-repository";
 import { findDuplicateContacts } from "@/verticals/mortgage/households/services";
-import { classifyOpportunity, generateReviewOpportunities, sydneyBusinessDate } from "@/verticals/mortgage/review-opportunities/services";
+import { businessDate, classifyOpportunity, generateReviewOpportunities } from "@/verticals/mortgage/review-opportunities/services";
 import { canTransitionLead } from "@/verticals/mortgage/leads/workflow";
 import type { ConvertMortgageLeadInput } from "@/verticals/mortgage/households/conversion-models";
 import type { Household } from "@/verticals/mortgage/households/models";
@@ -29,7 +29,7 @@ describe("duplicate review and tenancy",()=>{
 });
 
 describe("review trigger generation",()=>{
-  it("uses the Sydney business date across the UTC date boundary",()=>{const instant=new Date("2026-11-13T13:30:00.000Z");expect(sydneyBusinessDate(instant)).toBe("2026-11-14");expect(classifyOpportunity("Annual review","2026-11-13",instant)).toBe("Overdue");expect(classifyOpportunity("Annual review","2026-11-21",instant)).toBe("Due");});
+  it("uses the Sydney business date across the UTC date boundary",()=>{const instant=new Date("2026-11-13T13:30:00.000Z");expect(businessDate(instant)).toBe("2026-11-14");expect(classifyOpportunity("Annual review","2026-11-13",instant)).toBe("Overdue");expect(classifyOpportunity("Annual review","2026-11-21",instant)).toBe("Due");});
   it("classifies annual review boundaries",()=>{expect(classifyOpportunity("Annual review","2026-11-14",now())).toBe("Due");expect(classifyOpportunity("Annual review","2026-11-21",now())).toBe("Due");expect(classifyOpportunity("Annual review","2026-11-22",now())).toBe("Upcoming");expect(classifyOpportunity("Annual review","2026-12-14",now())).toBe("Upcoming");expect(classifyOpportunity("Annual review","2026-12-15",now())).toBeNull();expect(classifyOpportunity("Annual review","2026-11-13",now())).toBe("Overdue");});
   it("classifies fixed-expiry boundaries",()=>{expect(classifyOpportunity("Fixed-rate expiry","2026-12-14",now())).toBe("Due");expect(classifyOpportunity("Fixed-rate expiry","2026-12-15",now())).toBe("Upcoming");expect(classifyOpportunity("Fixed-rate expiry","2027-02-12",now())).toBe("Upcoming");expect(classifyOpportunity("Fixed-rate expiry","2027-02-13",now())).toBeNull();expect(classifyOpportunity("Fixed-rate expiry","2026-11-13",now())).toBe("Overdue");});
   it("is idempotent, initially unassigned and excludes discharged loans and inactive households",()=>{const state=createFixtureState(),active=state.households.find(item=>item.status==="Active")!,inactive={...active,id:"household_inactive",status:"Inactive"} as Household,base=state.loanRecords[0],loans=[{...base,id:"loan_active",householdId:active.id,nextReviewDate:"2026-11-20",fixedRateExpiryDate:undefined,status:"Active"},{...base,id:"loan_discharged",householdId:active.id,nextReviewDate:"2026-11-20",fixedRateExpiryDate:undefined,status:"Discharged"},{...base,id:"loan_inactive",householdId:inactive.id,nextReviewDate:"2026-11-20",fixedRateExpiryDate:undefined,status:"Active"}] as MinimalLoanRecord[];const once=generateReviewOpportunities(loans,[active,inactive],[],now());const twice=generateReviewOpportunities(loans,[active,inactive],once,now());expect(once).toHaveLength(1);expect(once[0].ownerMembershipId).toBeUndefined();expect(twice).toHaveLength(0);});

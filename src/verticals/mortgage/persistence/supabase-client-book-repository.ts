@@ -1,3 +1,5 @@
+import { untyped } from "./untyped";
+import type { RateType } from "@/verticals/mortgage/loans/models";
 import type { ClientLoanInput, ClientOpportunityInput } from "@/verticals/mortgage/households/client-list";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/platform/database/database.types";
@@ -60,6 +62,7 @@ export class SupabaseClientBookRepository {
       this.client.from("mortgage_referral_partners").select("id,name,organisation_name").eq("organisation_id",organisationId).eq("status","Active").order("name"),
     ]);
     fail([links.error,memberships.error,profiles.error,loans.error,conversion.error,tasks.error,reviewOpportunities.error,activities.error,referrals.error], "Unable to load client household");
+    const [notes,rateTypes]=await Promise.all([this.householdNotes(context,householdId),this.loanRateTypes(context,householdId)]);
     const contactIds = (links.data ?? []).map(row => row.contact_id);
     const contacts = contactIds.length ? await this.client.from("contacts").select(contactColumns).eq("organisation_id", organisationId).in("id", contactIds) : { data:[], error:null };
     const consent = contactIds.length ? await this.client.from("consent_evidence").select("id,contact_id,channel,status,source,effective_at,recorded_at").eq("organisation_id", organisationId).in("contact_id", contactIds).order("effective_at", { ascending:false }) : { data:[], error:null };
@@ -78,7 +81,8 @@ export class SupabaseClientBookRepository {
         (links.data ?? []).map(link => ({ contactId:link.contact_id, contactName:contactMap.has(link.contact_id) ? `${contactMap.get(link.contact_id)!.given_name} ${contactMap.get(link.contact_id)!.family_name}` : "Contact unavailable" })),
         this.now(),
       ),
-      loans:(loans.data ?? []).map(row => ({ id:row.id, externalReference:row.external_reference ?? undefined, lenderName:row.lender_name, loanPurpose:row.loan_purpose, settlementDate:row.settlement_date ?? undefined, fixedRateExpiryDate:row.fixed_rate_expiry_date ?? undefined, lastReviewDate:row.last_review_date ?? undefined, nextReviewDate:row.next_review_date ?? undefined, status:row.status, source:row.source, dataConfidence:row.data_confidence, version:row.version })),
+      notes:notes.map(note=>({id:note.id,body:note.body,createdAt:note.created_at,authorName:(memberships.data??[]).find(member=>member.id===note.author_membership_id)?.display_name})),
+      loans:(loans.data ?? []).map(row => ({ id:row.id, rateType:rateTypes.get(row.id), externalReference:row.external_reference ?? undefined, lenderName:row.lender_name, loanPurpose:row.loan_purpose, settlementDate:row.settlement_date ?? undefined, fixedRateExpiryDate:row.fixed_rate_expiry_date ?? undefined, lastReviewDate:row.last_review_date ?? undefined, nextReviewDate:row.next_review_date ?? undefined, status:row.status, source:row.source, dataConfidence:row.data_confidence, version:row.version })),
       conversion:conversion.data ? { id:conversion.data.id, leadId:conversion.data.lead_id, convertedAt:conversion.data.converted_at, convertedByMembershipId:conversion.data.converted_by_membership_id } : undefined,
       tasks:(tasks.data ?? []).map(row => ({ id:row.id, title:row.title, dueAt:row.due_at, status:row.status, priority:row.priority, assignedMembershipId:row.assigned_membership_id, version:row.version })),
       opportunities:((reviewOpportunities.data ?? []) as unknown as ReviewOpportunityRow[]).map(row => ({ id:row.opportunity_id, loanRecordId:row.loan_record_id, type:row.trigger_type, triggerDate:row.trigger_date, status:row.effective_status, ownerMembershipId:row.owner_membership_id ?? undefined, ownerName:row.owner_name ?? undefined, version:row.version, completedAt:row.completed_at ?? undefined, dismissalReason:row.dismissal_reason ?? undefined })),
@@ -132,14 +136,14 @@ export class SupabaseClientBookRepository {
     if(householdIds&&!householdIds.length)return{loans:[],opportunities:[],members:[],households:[]};
     const scoped=<T extends {in:(column:string,values:string[])=>T}>(query:T,column:string)=>householdIds?query.in(column,householdIds):query;
     const [loans,opportunities,members,households]=await Promise.all([
-      scoped(this.client.from("mortgage_minimal_loan_records").select("household_id,lender_name,loan_purpose,fixed_rate_expiry_date,status").eq("organisation_id",context.organisationId),"household_id"),
+      (()=>{const query=untyped(this.client).from("mortgage_minimal_loan_records").select("household_id,lender_name,loan_purpose,rate_type,fixed_rate_expiry_date,status").eq("organisation_id",context.organisationId);return householdIds?query.in("household_id",householdIds):query;})(),
       scoped(this.client.from("opportunities").select("subject_id,opportunity_type,trigger_date,lifecycle_status").eq("organisation_id",context.organisationId).eq("subject_type","mortgage.household"),"subject_id"),
       householdIds?Promise.resolve({data:[],error:null}):this.client.from("mortgage_household_members").select("household_id,contact_id").eq("organisation_id",context.organisationId),
       householdIds?Promise.resolve({data:[],error:null}):this.client.from("mortgage_households").select("id,status").eq("organisation_id",context.organisationId),
     ]);
     fail([loans.error,opportunities.error,members.error,households.error],"Unable to load client retention details");
     return {
-      loans:(loans.data??[]).map(row=>({householdId:row.household_id,lenderName:row.lender_name,loanPurpose:row.loan_purpose,fixedRateExpiryDate:row.fixed_rate_expiry_date??undefined,status:row.status})),
+      loans:((loans.data??[]) as Array<{household_id:string;lender_name:string;loan_purpose:string;rate_type:string|null;fixed_rate_expiry_date:string|null;status:string}>).map(row=>({householdId:row.household_id,lenderName:row.lender_name,loanPurpose:row.loan_purpose,rateType:rateTypeOrUndefined(row.rate_type),fixedRateExpiryDate:row.fixed_rate_expiry_date??undefined,status:row.status})),
       opportunities:(opportunities.data??[]).map(row=>({householdId:row.subject_id,type:row.opportunity_type,triggerDate:row.trigger_date,status:row.lifecycle_status})),
       members:((members.data??[]) as Array<{household_id:string;contact_id:string}>).map(row=>({householdId:row.household_id,contactId:row.contact_id})),
       households:((households.data??[]) as Array<{id:string;status:string}>),
@@ -166,9 +170,16 @@ export class SupabaseClientBookRepository {
   async transitionHousehold(context:TenantContext,input:{commandId:string;householdId:string;expectedVersion:number;targetStatus:"Active"|"Archived"}){return this.operation("transition_mortgage_household_status",{organisation_id:context.organisationId,command_id:input.commandId,household_id:input.householdId,expected_version:input.expectedVersion,target_status:input.targetStatus});}
   async transitionHouseholdTask(context:TenantContext,input:{commandId:string;taskId:string;expectedVersion:number;targetStatus:"Completed"|"Cancelled"}){return this.operation("transition_mortgage_household_task",{organisation_id:context.organisationId,command_id:input.commandId,task_id:input.taskId,expected_version:input.expectedVersion,target_status:input.targetStatus});}
 
+  /** 4F.3 (d): household notes, newest first. RLS requires mortgage.household.view. */
+  async householdNotes(context:TenantContext,householdId:string){const{data,error}=await untyped(this.client).from("mortgage_household_notes").select("id,body,author_membership_id,created_at").eq("organisation_id",context.organisationId).eq("household_id",householdId).order("created_at",{ascending:false}).limit(100);if(error)throw new Error(`Unable to load household notes: ${error.message}`);return (data??[]) as Array<{id:string;body:string;author_membership_id:string;created_at:string}>;}
+  /** 4F.3 (e): rate types for one household's loans. */
+  async loanRateTypes(context:TenantContext,householdId:string){const{data,error}=await untyped(this.client).from("mortgage_minimal_loan_records").select("id,rate_type").eq("organisation_id",context.organisationId).eq("household_id",householdId);if(error)throw new Error(`Unable to load loan rate types: ${error.message}`);return new Map<string,RateType|undefined>(((data??[]) as Array<{id:string;rate_type:string|null}>).map(row=>[row.id,rateTypeOrUndefined(row.rate_type)]));}
+  async addHouseholdNote(context:TenantContext,input:{commandId:string;householdId:string;body:string}){return this.operation("add_mortgage_household_note",{organisation_id:context.organisationId,command_id:input.commandId,household_id:input.householdId,body:input.body});}
+  async setLoanRateType(context:TenantContext,input:{commandId:string;loanRecordId:string;expectedVersion:number;rateType:string}){return this.operation("set_mortgage_loan_rate_type",{organisation_id:context.organisationId,command_id:input.commandId,loan_record_id:input.loanRecordId,expected_version:input.expectedVersion,rate_type:input.rateType});}
   private async operation(name:string,args:Record<string,string|number|boolean|null>){const{data,error}=await this.client.rpc(name as never,args as never);if(error)throw operationError(error.message);return object(data as Json);}
 }
 
+const rateTypeOrUndefined=(value:string|null|undefined):RateType|undefined=>value==="Fixed"||value==="Variable"||value==="Split"?value:undefined;
 function object(value:Json):Record<string,Json|undefined>{ return value && typeof value === "object" && !Array.isArray(value) ? value : {}; }
 function jsonArray(value:Json|undefined):Json[]{ return Array.isArray(value) ? value : []; }
 function jsonString(value:Json|undefined, label:string):string { if(typeof value!=="string") throw new Error(`The Client Book returned an invalid ${label}.`); return value; }

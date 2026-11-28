@@ -7,6 +7,8 @@ import { usePrototype } from "./prototype-provider";
 import { BrokerageSelect, Sidebar } from "./sidebar";
 import { FixtureCommandBar } from "./command-bar";
 import { EnvironmentRibbon } from "./environment-ribbon";
+import { TimeZoneProvider } from "./time-zone";
+import { organisationTimeZone } from "@/platform/time/zoned";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { repo, context, now, revision, switchOrganisation, switchUser } = usePrototype(); void revision;
@@ -15,7 +17,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const brokerage = state.organisations.find(item => item.id === context.organisationId)!;
   const activities = state.activities.filter(item => item.organisationId === context.organisationId);
   const leadsBadge = membership.capabilities.includes("lead.view") ? repo.listLeads(context).filter(lead => needsFirstResponse(lead, activities, now())).length : 0;
-  return <div className="app-shell app-shell--ribbon">
+  return <TimeZoneProvider timeZone={organisationTimeZone(brokerage)}><div className="app-shell app-shell--ribbon">
     <EnvironmentRibbon mode="fixture"><label htmlFor="dev-user">User</label><select id="dev-user" value={context.userId} onChange={event => switchUser(event.target.value as UserId)}>{state.users.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></EnvironmentRibbon>
     <Sidebar
       capabilities={membership.capabilities}
@@ -27,5 +29,5 @@ export function AppShell({ children }: { children: ReactNode }) {
     />
     <main className="app-main"><div className="workspace">{children}</div></main>
     <FixtureCommandBar/>
-  </div>;
+  </div></TimeZoneProvider>;
 }

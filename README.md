@@ -185,3 +185,7 @@ The nine desktop screens follow the Figma file "Broker Growth Desk – AI-native
 - Lead detail, Clients, Partners, Campaigns (review panel, "Not scheduled"), Settings (CSV-only data sources) and the command bar (record search, create actions, G-then-key shortcuts; no natural-language questions).
 
 Phase 1 is desktop only. Nothing is sent, scheduled or exported. Supabase-mode Settings, Reports and Campaigns remain unavailable until their milestones.
+
+## Milestone 4F.3 — data foundations (migrations written, not yet applied)
+
+Five migrations add an audit actor (person, system, import), a brokerage time zone, partner next steps, household notes and loan rate type (Fixed, Variable, Split). Business dates, form date-times and displayed times all use the brokerage time zone. The recovered-lead period (30 days) is one setting in `src/verticals/mortgage/reporting/settings.ts`. To apply and verify them on the development project, follow `docs/4f3-hosted-runbook.md`.

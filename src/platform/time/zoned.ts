@@ -26,3 +26,12 @@ export function zonedLocalToIso(value: string, timeZone = DEFAULT_ORGANISATION_T
   if (adjusted !== wall - instant) instant = wall - adjusted;
   return new Date(instant).toISOString();
 }
+
+/** The organisation's zone, or the default for organisations created before the time zone field existed. */
+export const organisationTimeZone = (organisation?: { timeZone?: string | null } | null) => organisation?.timeZone || DEFAULT_ORGANISATION_TIME_ZONE;
+
+/** Calendar date (YYYY-MM-DD) of `now` in `timeZone`. */
+export function businessDateIn(now: Date, timeZone = DEFAULT_ORGANISATION_TIME_ZONE) {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now).map(part => [part.type, part.value]));
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}

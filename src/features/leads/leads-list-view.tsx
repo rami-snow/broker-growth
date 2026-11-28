@@ -9,7 +9,8 @@ import type { ActivityEvent } from "@/platform/audit/models";
 import type { Task } from "@/platform/tasks/models";
 import { loanPurposes, type MortgageLead, type MortgageLeadStatus } from "@/verticals/mortgage/leads/models";
 import { compareByResponseDue, formatDuration, leadResponseState, type LeadResponseState } from "@/verticals/mortgage/leads/response";
-import { formatDayMonth, formatTime, sydneyDay } from "@/features/today/today-model";
+import { dayKey, formatDayMonth, formatTime } from "@/features/today/today-model";
+import { useTimeZone } from "@/components/time-zone";
 
 export const leadStages: MortgageLeadStatus[] = ["New", "Contact attempted", "Contacted", "Discovery booked", "Nurture", "Converted", "Closed"];
 type Tab = "all" | "needs-response" | "unassigned" | "discovery" | "closed";
@@ -23,14 +24,14 @@ export function responseBadge(state: LeadResponseState, status: MortgageLeadStat
   if (state.kind === "responded") return { label: `Replied ${formatDuration(state.minutes)}`, tone: state.withinTarget ? "success" : "neutral" };
   return status === "Closed" ? { label: "No reply", tone: "neutral" } : null;
 }
-export const whenLabel = (value: string, now: Date) => `${sydneyDay(value) === sydneyDay(now) ? "Today" : formatDayMonth(value)}, ${formatTime(value)}`;
+export const whenLabel = (value: string, now: Date, timeZone?: string) => `${dayKey(value, timeZone) === dayKey(now, timeZone) ? "Today" : formatDayMonth(value, timeZone)}, ${formatTime(value, timeZone)}`;
 
 /** Leads (Figma frame 02). Shared by fixture and Supabase runtimes. */
 export function LeadsListView({ leads, memberships, activities, tasks, now, canCreate, renderCreate }: {
   leads: MortgageLead[]; memberships: Array<{ id: string; displayName: string; mortgageProfile?: { position: string } }>; activities: Array<Pick<ActivityEvent<string>, "leadId" | "type" | "occurredAt" | "newStatus">>; tasks: Task[]; now: Date;
   canCreate: boolean; renderCreate: (close: () => void) => ReactNode;
 }) {
-  const router = useRouter();
+  const router = useRouter(), timeZone = useTimeZone();
   const [tab, setTab] = useState<Tab>("all"), [search, setSearch] = useState(""), [stage, setStage] = useState(""), [owner, setOwner] = useState(""), [source, setSource] = useState(""), [purpose, setPurpose] = useState(""), [sort, setSort] = useState<Sort>("response"), [manualCreate, setCreating] = useState<boolean | null>(null);
   const requestedCreate = useUrlParam("new") === "1";
   const creating = manualCreate ?? (canCreate && requestedCreate);
@@ -69,10 +70,10 @@ export function LeadsListView({ leads, memberships, activities, tasks, now, canC
         <td><span className="person-cell"><span className="avatar">{lead.firstName[0]}</span><span><strong>{lead.firstName} {lead.lastName}</strong><small>{lead.loanPurpose}</small></span></span></td>
         <td><Badge tone={stageTone(lead.status)}>{lead.status}</Badge></td>
         <td>{badge ? <Badge tone={badge.tone}>{badge.label}</Badge> : <span className="muted">—</span>}</td>
-        <td>{nextActionAt && isActive(lead) ? <>{nextActionTitle && <small>{nextActionTitle}</small>}{whenLabel(nextActionAt, now)}</> : "None"}</td>
+        <td>{nextActionAt && isActive(lead) ? <>{nextActionTitle && <small>{nextActionTitle}</small>}{whenLabel(nextActionAt, now, timeZone)}</> : "None"}</td>
         <td>{ownerName ? <span className="person-cell"><span className="avatar">{ownerName[0]}</span>{ownerName}</span> : isActive(lead) ? <Badge tone="warning">Needs owner</Badge> : <span className="muted">Unassigned</span>}</td>
         <td>{lead.source || "Other"}</td>
-        <td><small>{formatDayMonth(lastActivity)}</small></td>
+        <td><small>{formatDayMonth(lastActivity, timeZone)}</small></td>
       </tr>; })}</tbody>
       <tfoot><tr><td colSpan={4}>{showingCount(filtered.length, leads.length, "lead")}</td><td colSpan={3} style={{ textAlign: "right" }}>Sorted by {sortLabel}</td></tr></tfoot>
     </Table> : <section className="card"><EmptyState title="No leads match these filters" body="Change the tab, search or filters to see more leads."/></section>}

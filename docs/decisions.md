@@ -149,3 +149,7 @@ Milestone 4F.2 aligns the UI to the Figma desktop screens. Fixture and Supabase 
 ## ADR-036 — Email-only campaigns in phase 1
 
 Both mortgage campaign purposes support the Email channel only. Eligibility is email consent with status Recorded that has not been withdrawn, after suppression checks. The platform channel type and the database keep SMS so that consent recording on leads and clients is unchanged and no migration is needed; a separate marketing consent channel is not introduced.
+
+## ADR-037 — Brokerage time zone and temporary untyped reads
+
+Each organisation stores an IANA time zone (default Australia/Sydney). Database business dates, server-side parsing of datetime-local inputs, fixture review generation and every displayed time use it. Until the 4F.3 migrations are applied and `pnpm db:types` regenerates the types, the new columns are read through one documented untyped accessor at the persistence boundary rather than by hand-editing generated types.

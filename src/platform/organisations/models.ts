@@ -7,6 +7,8 @@ export interface Organisation {
   verticalKey: VerticalKey;
   status: "Active" | "Inactive";
   region?: string;
+  /** IANA time zone used for business dates and for reading date-time inputs. */
+  timeZone?: string;
 }
 
 export interface OrganisationMembership<TCapability extends string = SharedCapability> {

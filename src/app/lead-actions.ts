@@ -1,6 +1,6 @@
 "use server";
 
-import { zonedLocalToIso } from "@/platform/time/zoned";
+import { organisationTimeZone, zonedLocalToIso } from "@/platform/time/zoned";
 import { revalidatePath } from "next/cache";
 import { requireVerifiedCurrentUser } from "@/platform/auth/current-user";
 import { createServerSupabaseClient } from "@/platform/auth/server-client";
@@ -17,7 +17,8 @@ export async function runLeadAction(_state: LeadActionState, formData: FormData)
   const commandId = value(formData, "commandId");
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(commandId)) return failure("A valid action key is required. Close the form and try again.");
   try {
-    const { context, repository } = await persistentOperationsContext();
+    const { context, repository, activeMembership } = await persistentOperationsContext();
+    const timeZone = organisationTimeZone(activeMembership.organisation);
     let result: { leadId: string; version: number };
     if (operation === "create") {
       result = await repository.createLead(context, commandId, {
@@ -33,10 +34,10 @@ export async function runLeadAction(_state: LeadActionState, formData: FormData)
       if (operation === "claim") result = await repository.claimLead(context, commandId, leadId, expectedVersion);
       else if (operation === "assign") result = await repository.assignLead(context, commandId, leadId, expectedVersion, value(formData, "owner") as MembershipId);
       else if (operation === "transition") result = await repository.transitionLead(context, commandId, leadId, expectedVersion, value(formData, "status") as MortgageLeadStatus, optional(formData, "note"));
-      else if (operation === "contact") result = await repository.recordContactAttempt(context, commandId, leadId, expectedVersion, { channel: value(formData, "channel") as never, outcome: value(formData, "outcome") as never, note: optional(formData, "note"), nextActionAt: dateTime(formData, "nextActionAt", false) });
+      else if (operation === "contact") result = await repository.recordContactAttempt(context, commandId, leadId, expectedVersion, { channel: value(formData, "channel") as never, outcome: value(formData, "outcome") as never, note: optional(formData, "note"), nextActionAt: dateTime(formData, "nextActionAt", false, timeZone) });
       else if (operation === "note") result = await repository.addNote(context, commandId, leadId, expectedVersion, value(formData, "note"));
-      else if (operation === "task") result = await repository.createTask(context, commandId, expectedVersion, { leadId, assignedMembershipId: value(formData, "owner") as MembershipId, title: value(formData, "title"), dueAt: dateTime(formData, "dueAt", true)!, priority: value(formData, "priority") as never });
-      else if (operation === "appointment") result = await repository.createAppointment(context, commandId, expectedVersion, { leadId, assignedMembershipId: value(formData, "owner") as MembershipId, startsAt: dateTime(formData, "startsAt", true)!, durationMinutes: integer(formData, "duration"), meetingMethod: value(formData, "method") as never, locationOrLink: optional(formData, "location"), notes: optional(formData, "note") ?? "" });
+      else if (operation === "task") result = await repository.createTask(context, commandId, expectedVersion, { leadId, assignedMembershipId: value(formData, "owner") as MembershipId, title: value(formData, "title"), dueAt: dateTime(formData, "dueAt", true, timeZone)!, priority: value(formData, "priority") as never });
+      else if (operation === "appointment") result = await repository.createAppointment(context, commandId, expectedVersion, { leadId, assignedMembershipId: value(formData, "owner") as MembershipId, startsAt: dateTime(formData, "startsAt", true, timeZone)!, durationMinutes: integer(formData, "duration"), meetingMethod: value(formData, "method") as never, locationOrLink: optional(formData, "location"), notes: optional(formData, "note") ?? "" });
       else if (operation === "referral") result = await repository.setReferralPartner(context,commandId,leadId,expectedVersion,optional(formData,"referralPartnerId"));
       else if (operation === "reopen") result = await repository.transitionLead(context, commandId, leadId, expectedVersion, "Nurture", "Lead deliberately reopened");
       else return failure("Unknown lead operation.");
@@ -59,6 +60,6 @@ export async function persistentOperationsContext() {
 function value(data: FormData, key: string) { return String(data.get(key) ?? "").trim(); }
 function optional(data: FormData, key: string) { const result = value(data, key); return result || undefined; }
 function integer(data: FormData, key: string) { const result = Number(value(data, key)); if (!Number.isInteger(result)) throw new Error(`${key} must be a whole number.`); return result; }
-function dateTime(data: FormData, key: string, required: boolean) { const raw = value(data, key); if (!raw && !required) return undefined; try { return zonedLocalToIso(raw); } catch { throw new Error(`Enter a valid ${key}.`); } }
+function dateTime(data: FormData, key: string, required: boolean, timeZone: string) { const raw = value(data, key); if (!raw && !required) return undefined; try { return zonedLocalToIso(raw, timeZone); } catch { throw new Error(`Enter a valid ${key}.`); } }
 function failure(message: string): LeadActionState { return { ok: false, message }; }
 function successMessage(operation: string) { return ({ create: "Lead created", claim: "Lead claimed", assign: "Owner assigned", transition: "Status updated", contact: "Contact attempt recorded", note: "Note added", task: "Follow-up task created", appointment: "Discovery appointment booked", referral:"Referral attribution updated", reopen: "Lead reopened into nurture" } as Record<string,string>)[operation] ?? "Action completed"; }

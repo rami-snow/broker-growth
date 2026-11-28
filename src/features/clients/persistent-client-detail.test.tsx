@@ -3,6 +3,7 @@ import { describe,expect,it,vi } from "vitest";
 import type { ClientBookDetailSnapshot } from "@/verticals/mortgage/repositories/client-book-port";
 import { PersistentClientDetail } from "./persistent-client-detail";
 
+vi.mock("next/navigation",()=>({useRouter:()=>({refresh:vi.fn(),push:vi.fn()}),usePathname:()=>"/client-book"}));
 vi.mock("@/app/client-book-actions",()=>({runPersistentClientBookOperation:vi.fn(async()=>({ok:false,message:""})),searchPersistentContactOptions:vi.fn(async()=>({options:[],message:""}))}));
 
 const snapshot:ClientBookDetailSnapshot={

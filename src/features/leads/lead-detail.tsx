@@ -1,5 +1,6 @@
 "use client";
 
+import { useTimeZone } from "@/components/time-zone";
 import { zonedLocalToIso } from "@/platform/time/zoned";
 import Link from "next/link";
 import { useState } from "react";
@@ -17,7 +18,7 @@ import { LeadDetailView } from "./lead-detail-view";
 import { LeadConversionModal } from "@/features/clients/lead-conversion-modal";
 
 type Action = "assign" | "status" | "contact" | "note" | "task" | "appointment" | "convert" | null;
-export function LeadDetail({ leadId }: { leadId: string }) {
+export function LeadDetail({ leadId }: { leadId: string }) {const timeZone=useTimeZone();
   const { repo, context, now, revision, mutate } = usePrototype(); void revision;
   const [action,setAction] = useState<Action>(null), [message,setMessage] = useState(""), [error,setError] = useState("");
   let lead; try { lead = repo.getLead(context, leadId as LeadId); } catch { return <section className="surface inaccessible"><h1>Lead unavailable</h1><p>This lead does not belong to the active brokerage, or the active user has no matching membership.</p><Link className="ui-button ui-button--secondary" href="/leads">Return to leads</Link></section>; }
@@ -37,10 +38,10 @@ export function LeadDetail({ leadId }: { leadId: string }) {
     {message && <div className="toast"><Check/>{message}</div>}{action==="convert"&&<LeadConversionModal leadId={lead.id} onClose={()=>setAction(null)} onConverted={()=>{setAction(null);setMessage("Lead converted to a client household");}}/>}{action && action!=="convert" && <ActionModal action={action} leadId={lead.id} members={members} error={error} onClose={() => { setAction(null); setError(""); }} onSubmit={(data) => {
       if (action === "assign") run(() => repo.assignLead(context,lead.id,data.owner as MembershipId),"Owner assigned");
       if (action === "status") run(() => repo.transitionLead(context,lead.id,data.status as MortgageLeadStatus,data.note),"Status updated");
-      if (action === "contact") run(() => repo.recordContactAttempt(context,lead.id,{ channel:data.channel as ContactChannel, outcome:data.outcome as ContactOutcome, note:data.note, nextActionAt:data.nextActionAt ? zonedLocalToIso(data.nextActionAt) : undefined }),"Contact attempt recorded");
+      if (action === "contact") run(() => repo.recordContactAttempt(context,lead.id,{ channel:data.channel as ContactChannel, outcome:data.outcome as ContactOutcome, note:data.note, nextActionAt:data.nextActionAt ? zonedLocalToIso(data.nextActionAt, timeZone) : undefined }),"Contact attempt recorded");
       if (action === "note") run(() => repo.addNote(context,lead.id,data.note),"Note added");
-      if (action === "task") run(() => repo.createTask(context,{ leadId:lead.id, assignedMembershipId:(lead.ownerMembershipId ?? membership.id), title:data.title, dueAt:zonedLocalToIso(data.dueAt), priority:data.priority as "High"|"Normal"|"Low" }),"Follow-up task created");
-      if (action === "appointment") run(() => repo.createAppointment(context,{ leadId:lead.id, assignedMembershipId:data.owner as MembershipId, startsAt:zonedLocalToIso(data.startsAt), durationMinutes:Number(data.duration), meetingMethod:data.method as "Phone"|"Video"|"In person", locationOrLink:data.location, notes:data.note }),"Discovery appointment booked");
+      if (action === "task") run(() => repo.createTask(context,{ leadId:lead.id, assignedMembershipId:(lead.ownerMembershipId ?? membership.id), title:data.title, dueAt:zonedLocalToIso(data.dueAt, timeZone), priority:data.priority as "High"|"Normal"|"Low" }),"Follow-up task created");
+      if (action === "appointment") run(() => repo.createAppointment(context,{ leadId:lead.id, assignedMembershipId:data.owner as MembershipId, startsAt:zonedLocalToIso(data.startsAt, timeZone), durationMinutes:Number(data.duration), meetingMethod:data.method as "Phone"|"Video"|"In person", locationOrLink:data.location, notes:data.note }),"Discovery appointment booked");
     }} transitions={transitions}/>}</>;
 }
 

@@ -57,7 +57,8 @@ export interface ClientBookDetailSnapshot {
     effectiveAt?: string;
     recordedAt?: string;
   }>;
-  loans: Array<{ id: string; externalReference?: string; lenderName: string; loanPurpose: string; settlementDate?: string; fixedRateExpiryDate?: string; lastReviewDate?: string; nextReviewDate?: string; status: string; source: string; dataConfidence: string; version: number }>;
+  notes?: Array<{ id: string; body: string; authorName?: string; createdAt: string }>;
+  loans: Array<{ id: string; rateType?: "Fixed" | "Variable" | "Split"; externalReference?: string; lenderName: string; loanPurpose: string; settlementDate?: string; fixedRateExpiryDate?: string; lastReviewDate?: string; nextReviewDate?: string; status: string; source: string; dataConfidence: string; version: number }>;
   conversion?: { id: string; leadId: string; convertedAt: string; convertedByMembershipId: string };
   tasks: Array<{ id: string; title: string; dueAt: string; status: string; priority: string; assignedMembershipId: string; version:number }>;
   opportunities: Array<{ id: string; loanRecordId: string; type: string; triggerDate: string; status: string; ownerMembershipId?: string; ownerName?: string; version: number; completedAt?: string; dismissalReason?: string }>;

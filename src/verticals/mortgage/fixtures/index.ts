@@ -6,19 +6,20 @@ import type { Task } from "@/platform/tasks/models";
 import type { ConsentRecord } from "@/platform/consent/models";
 import type { ApprovalRecord, AudienceSnapshot, Campaign, CampaignActivityEvent, CampaignVersion, SuppressionRecord } from "@/platform/campaigns/models";
 import type { MortgageApplicationCapability, MortgageOrganisationMembership } from "@/verticals/mortgage/brokerage/models";
-import type { Household, HouseholdMember } from "@/verticals/mortgage/households/models";
+import type { Household, HouseholdMember, HouseholdNote } from "@/verticals/mortgage/households/models";
 import type { MortgageLead, MortgageLeadStatus, LoanPurpose } from "@/verticals/mortgage/leads/models";
 import type { MinimalLoanRecord } from "@/verticals/mortgage/loans/models";
 import type { ReferralPartner } from "@/verticals/mortgage/referrals/models";
 import type { ReviewOpportunity } from "@/verticals/mortgage/review-opportunities/models";
 import { generateReviewOpportunities } from "@/verticals/mortgage/review-opportunities/services";
+import { organisationTimeZone } from "@/platform/time/zoned";
 import { mortgageVerticalDefinition } from "@/verticals/mortgage/definition";
 import type { MortgageActivityEvent } from "@/verticals/mortgage/audit/models";
 import { annualReviewPurposeKey, annualReviewSourceKey, fixedExpiryPurposeKey, fixedExpirySourceKey } from "@/verticals/mortgage/campaigns/extensions";
 
 export const organisations: Organisation[] = [
-  { id: "brk_harbour", name: "Harbourlight Mortgage Co.", shortName: "HM", verticalKey:"mortgage", status:"Active", region: "NSW" },
-  { id: "brk_ranges", name: "Ranges Home Finance", shortName: "RF", verticalKey:"mortgage", status:"Active", region: "VIC" },
+  { id: "brk_harbour", name: "Harbourlight Mortgage Co.", shortName: "HM", verticalKey:"mortgage", status:"Active", region: "NSW", timeZone: "Australia/Sydney" },
+  { id: "brk_ranges", name: "Ranges Home Finance", shortName: "RF", verticalKey:"mortgage", status:"Active", region: "VIC", timeZone: "Australia/Melbourne" },
 ];
 
 export const users: UserIdentity[] = [
@@ -105,7 +106,7 @@ export const referralPartners:ReferralPartner[]=[
   ["ranges_agent","Jordan Pike","Ranges Property Co.","Real estate agent","brk_ranges","mem_r_broker1"],
   ["ranges_adviser","Sam Hollow","Hollow Advice","Financial adviser","brk_ranges","mem_r_broker2"],
   ["ranges_client","Jamie Brook",undefined,"Existing client","brk_ranges","mem_r_broker1"],
-].map(([slug,name,organisationName,type,organisationId,ownerMembershipId])=>({id:`referral_${slug}`,organisationId,name,organisationName,type,ownerMembershipId,status:"Active",version:1,email:`${String(name).toLowerCase().replace(" ",".")}@example.test`,createdAt:fixtureNow,updatedAt:fixtureNow} as ReferralPartner));
+].map(([slug,name,organisationName,type,organisationId,ownerMembershipId])=>({id:`referral_${slug}`,organisationId,name,organisationName,type,ownerMembershipId,status:"Active",version:1,email:`${String(name).toLowerCase().replace(" ",".")}@example.test`,createdAt:fixtureNow,updatedAt:fixtureNow,nextStep:slug==="harbour_buyers"?"Thank for the recent referral":slug==="harbour_accounting"?"Book an introductory coffee":undefined} as ReferralPartner));
 leads.filter(lead=>lead.source==="Referral partner").forEach(lead=>{const options=referralPartners.filter(partner=>partner.organisationId===lead.organisationId);const partner=options[Number(lead.id.slice(-3))%options.length];lead.referralPartnerId=partner.id;lead.referralPartnerName=partner.name;lead.referralPartnerStatus=partner.status;});
 
 const clientNames=[["Ruby","March"],["Ben","March"],["Amelia","Cove"],["Jonah","Cove"],["Sienna","Ford"],["Miles","Ford"],["Grace","Linden"],["Aria","Pace"],["Felix","Pace"],["Mae","River"],["Otis","Wells"],["Nora","Wells"],["Pia","Summit"],["Rory","Summit"],["Ada","Fern"],["Max","Vale"],["Elle","Vale"],["Sol","Bay"]] as const;
@@ -119,14 +120,14 @@ const householdBlueprints=[
 export const households:Household[]=householdBlueprints.map(([displayName,primaryIndex],index)=>{const harbour=index<6;return{id:`household_${String(index+1).padStart(3,"0")}`,organisationId:harbour?"brk_harbour":"brk_ranges",displayName,primaryContactId:contacts[primaryIndex].id,ownerMembershipId:harbour?(index%2?"mem_h_broker2":"mem_h_broker1"):(index%2?"mem_r_broker2":"mem_r_broker1"),sourceLeadId:index===3?"lead_008":index===9?"lead_018":undefined,referralPartnerId:referralPartners[harbour?index%3:3+(index%3)].id,status:index===9?"Inactive":"Active",createdAt:`2026-0${index%4+7}-10T09:00:00+10:00`,updatedAt:fixtureNow,version:1} as Household;});
 export const householdMembers:HouseholdMember[]=householdBlueprints.flatMap(([,primaryIndex,jointIndexes],index)=>[{organisationId:households[index].organisationId,householdId:households[index].id,contactId:contacts[primaryIndex].id,relationship:"Primary applicant"} as HouseholdMember,...jointIndexes.map(personIndex=>({organisationId:households[index].organisationId,householdId:households[index].id,contactId:contacts[personIndex].id,relationship:"Joint applicant"} as HouseholdMember))]);
 
-export const loanRecords:MinimalLoanRecord[]=Array.from({length:14},(_,index)=>{const household=households[index%households.length];const fixedDates=["2026-11-20","2026-12-20","2027-01-25",undefined,"2027-05-01","2026-11-10",undefined,"2027-02-11","2026-12-01",undefined,"2026-11-30","2027-06-01",undefined,"2026-12-14"];const reviewDates=["2026-11-14","2026-11-21","2026-12-10","2026-11-10",undefined,"2026-11-18","2027-03-01","2026-11-13","2026-12-01",undefined,"2026-11-28","2027-01-20","2026-11-16","2026-11-08"];return{id:`loan_${String(index+1).padStart(3,"0")}`,organisationId:household.organisationId,householdId:household.id,ownerMembershipId:household.ownerMembershipId,externalReference:`RET-${String(index+1).padStart(4,"0")}`,lenderName:["Example Mutual","Fictional Bank","Sample Credit Union"][index%3],loanPurpose:["Purchase","Refinance","Investment purchase"][index%3],settlementDate:`202${2+index%4}-0${index%8+1}-15`,fixedRateExpiryDate:fixedDates[index],lastReviewDate:index%3===0?"2025-11-14":undefined,nextReviewDate:reviewDates[index],status:index===5?"Discharged":index===8?"Unknown":"Active",source:"Imported fixture",dataConfidence:index%4===0?"Unverified":"Confirmed",createdAt:fixtureNow,updatedAt:fixtureNow,version:1} as MinimalLoanRecord;});
+export const loanRecords:MinimalLoanRecord[]=Array.from({length:14},(_,index)=>{const household=households[index%households.length];const fixedDates=["2026-11-20","2026-12-20","2027-01-25",undefined,"2027-05-01","2026-11-10",undefined,"2027-02-11","2026-12-01",undefined,"2026-11-30","2027-06-01",undefined,"2026-12-14"];const reviewDates=["2026-11-14","2026-11-21","2026-12-10","2026-11-10",undefined,"2026-11-18","2027-03-01","2026-11-13","2026-12-01",undefined,"2026-11-28","2027-01-20","2026-11-16","2026-11-08"];return{id:`loan_${String(index+1).padStart(3,"0")}`,organisationId:household.organisationId,householdId:household.id,ownerMembershipId:household.ownerMembershipId,externalReference:`RET-${String(index+1).padStart(4,"0")}`,lenderName:["Example Mutual","Fictional Bank","Sample Credit Union"][index%3],loanPurpose:["Purchase","Refinance","Investment purchase"][index%3],settlementDate:`202${2+index%4}-0${index%8+1}-15`,fixedRateExpiryDate:fixedDates[index],rateType:fixedDates[index]?(index%5===2?"Split":"Fixed"):"Variable",lastReviewDate:index%3===0?"2025-11-14":undefined,nextReviewDate:reviewDates[index],status:index===5?"Discharged":index===8?"Unknown":"Active",source:"Imported fixture",dataConfidence:index%4===0?"Unverified":"Confirmed",createdAt:fixtureNow,updatedAt:fixtureNow,version:1} as MinimalLoanRecord;});
 
 export const consentRecords:ConsentRecord[]=contacts.flatMap((person,index)=>{const householdMember=householdMembers.find(item=>item.contactId===person.id);if(!householdMember)return[];return(["Email","SMS","Phone"] as const).map((channel,channelIndex)=>({id:`consent_${person.id}_${channel.toLowerCase()}`,organisationId:person.organisationId,subjectReference:{type:"mortgage.household",id:householdMember.householdId},contactId:person.id,channel,status:(index+channelIndex)%7===0?"Opted out":(index+channelIndex)%4===0?"Not recorded":"Recorded",originalSource:"Imported fictional client-book fixture",originalRecordedAt:fixtureNow,recordedAt:fixtureNow,provenance:"Imported fixture"} as ConsentRecord));});
 const historicalOpportunities:ReviewOpportunity[]=[
   {id:"review_001_completed",organisationId:"brk_harbour",subjectReference:{type:"mortgage.household",id:"household_001"},householdId:"household_001",loanRecordId:"loan_001",ownerMembershipId:"mem_h_broker1",typeKey:"Annual review",triggerDate:"2026-10-01",lifecycleStatus:"Completed",createdAt:fixtureNow,updatedAt:fixtureNow,completedAt:fixtureNow},
   {id:"review_002_dismissed",organisationId:"brk_harbour",subjectReference:{type:"mortgage.household",id:"household_002"},householdId:"household_002",loanRecordId:"loan_002",ownerMembershipId:"mem_h_broker2",typeKey:"Fixed-rate expiry",triggerDate:"2026-10-10",lifecycleStatus:"Dismissed",createdAt:fixtureNow,updatedAt:fixtureNow,dismissalReason:"Client requested contact next year"},
 ];
-export const reviewOpportunities:ReviewOpportunity[]=[...historicalOpportunities,...generateReviewOpportunities(loanRecords,households,historicalOpportunities,new Date(fixtureNow))];
+export const reviewOpportunities:ReviewOpportunity[]=[...historicalOpportunities,...generateReviewOpportunities(loanRecords,households,historicalOpportunities,new Date(fixtureNow),organisationId=>organisationTimeZone(organisations.find(item=>item.id===organisationId)))];
 for(const opportunity of reviewOpportunities){if(!opportunity.ownerMembershipId){opportunity.ownerMembershipId=loanRecords.find(item=>item.id===opportunity.loanRecordId)?.ownerMembershipId;}}
 const firstOpenOpportunity=reviewOpportunities.find(item=>item.lifecycleStatus!=="Completed"&&item.lifecycleStatus!=="Dismissed");if(firstOpenOpportunity)firstOpenOpportunity.ownerMembershipId=undefined;
 
@@ -158,11 +159,14 @@ export const approvalRecords:ApprovalRecord[]=[{id:"campaign_approval_001",campa
 export const suppressionRecords:SuppressionRecord[]=[{id:"suppression_001",organisationId:"brk_harbour",contactId:"person_007",scope:"Contact",status:"Active",source:"External suppression fixture",effectiveAt:"2026-11-01T09:00:00+11:00",recordedAt:fixtureNow,actorMembershipId:"mem_h_admin",reason:"Client requested no campaign outreach"}];
 export const campaignActivities:CampaignActivityEvent[]=campaignBlueprints.flatMap(([idValue,,status],index)=>{const created={id:`campaign_event_fixture_${index}_created`,campaignId:idValue,campaignVersionId:`campaign_version_${String(index+1).padStart(3,"0")}`,organisationId:"brk_harbour",actorMembershipId:"mem_h_admin",occurredAt:fixtureNow,type:"campaign.created",summary:"Campaign plan created"}as CampaignActivityEvent;if(status==="Rejected")return[created,{...created,id:`campaign_event_fixture_${index}_rejected`,type:"campaign.rejected",summary:"Campaign plan rejected",note:"Revise the sender identification wording"}as CampaignActivityEvent];if(status==="Approved")return[created,{...created,id:`campaign_event_fixture_${index}_approved`,type:"campaign.approved",summary:"Campaign plan approved; no delivery occurred"}as CampaignActivityEvent];return[created];});
 
+/** Fictional household notes (4F.3 d). */
+export const householdNotes:HouseholdNote[]=[{id:"note_001",organisationId:"brk_harbour",householdId:"household_001",body:"Prefers a call after 5 pm. Mentioned possible renovation next year.",authorMembershipId:"mem_h_broker1",createdAt:"2026-11-12T09:15:00+11:00"}];
+
 export function createFixtureState() {
   return {
     organisations: structuredClone(organisations), users: structuredClone(users), memberships: structuredClone(memberships),
     leads: structuredClone(leads), tasks: structuredClone(tasks), appointments: structuredClone(appointments), activities: structuredClone(activities),
-    contacts:structuredClone(contacts),households:structuredClone(households),householdMembers:structuredClone(householdMembers),loanRecords:structuredClone(loanRecords),referralPartners:structuredClone(referralPartners),consentRecords:structuredClone(consentRecords),reviewOpportunities:structuredClone(reviewOpportunities),
+    contacts:structuredClone(contacts),households:structuredClone(households),householdMembers:structuredClone(householdMembers),loanRecords:structuredClone(loanRecords),referralPartners:structuredClone(referralPartners),householdNotes:structuredClone(householdNotes),consentRecords:structuredClone(consentRecords),reviewOpportunities:structuredClone(reviewOpportunities),
     campaigns:structuredClone(campaigns),campaignVersions:structuredClone(campaignVersions),audienceSnapshots:structuredClone(audienceSnapshots),approvalRecords:structuredClone(approvalRecords),suppressionRecords:structuredClone(suppressionRecords),campaignActivities:structuredClone(campaignActivities),
   };
 }

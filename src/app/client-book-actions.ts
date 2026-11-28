@@ -1,6 +1,8 @@
 "use server";
 
-import { zonedLocalToIso } from "@/platform/time/zoned";
+import { organisationTimeZone, zonedLocalToIso } from "@/platform/time/zoned";
+import { rateTypes } from "@/verticals/mortgage/loans/models";
+import { normaliseHouseholdNote } from "@/verticals/mortgage/households/models";
 import { revalidatePath } from "next/cache";
 import { createServerSupabaseClient } from "@/platform/auth/server-client";
 import { requireVerifiedCurrentUser } from "@/platform/auth/current-user";
@@ -42,19 +44,21 @@ export async function runPersistentLeadConversion(_state:ConversionActionState, 
 export async function runPersistentClientBookOperation(_state:ClientBookActionState,data:FormData):Promise<ClientBookActionState>{
   const householdId=value(data,"householdId");
   try{
-    const{context,repository}=await persistentClientBookContext(`/client-book/${encodeURIComponent(householdId)}`);
+    const{context,repository,activeMembership}=await persistentClientBookContext(`/client-book/${encodeURIComponent(householdId)}`);const timeZone=organisationTimeZone(activeMembership.organisation);
     const commandId=uuid(data,"commandId"),kind=value(data,"kind");
     if(kind==="add-loan")await repository.addLoan(context,{commandId,householdId,lenderName:required(data,"lenderName"),externalReference:optional(data,"externalReference"),loanPurpose:oneOf(data,"loanPurpose",["Purchase","Refinance","Investment purchase","Construction loan","Asset finance","Commercial finance","Other"]),settlementDate:optionalDate(data,"settlementDate"),lastReviewDate:optionalDate(data,"lastReviewDate"),nextReviewDate:optionalDate(data,"nextReviewDate"),fixedRateExpiryDate:optionalDate(data,"fixedRateExpiryDate"),status:oneOf(data,"status",["Active","Discharged","Unknown"]),dataConfidence:oneOf(data,"dataConfidence",["Confirmed","Unverified"])});
     else if(kind==="update-loan-dates")await repository.updateLoanDates(context,{commandId,loanRecordId:uuid(data,"loanRecordId"),expectedVersion:positiveInteger(data,"expectedVersion"),lastReviewDate:optionalDate(data,"lastReviewDate"),nextReviewDate:optionalDate(data,"nextReviewDate"),fixedRateExpiryDate:optionalDate(data,"fixedRateExpiryDate")});
     else if(kind==="claim-opportunity")await repository.claimOpportunity(context,{commandId,opportunityId:uuid(data,"opportunityId"),expectedVersion:positiveInteger(data,"expectedVersion")});
     else if(kind==="assign-opportunity")await repository.assignOpportunity(context,{commandId,opportunityId:uuid(data,"opportunityId"),expectedVersion:positiveInteger(data,"expectedVersion"),targetMembershipId:uuid(data,"targetMembershipId")});
     else if(kind==="transition-opportunity")await repository.transitionOpportunity(context,{commandId,opportunityId:uuid(data,"opportunityId"),expectedVersion:positiveInteger(data,"expectedVersion"),targetStatus:oneOf(data,"targetStatus",["Review booked","Completed","Dismissed","Reopen"]),dismissalReason:optional(data,"dismissalReason")});
-    else if(kind==="create-task")await repository.createHouseholdTask(context,{commandId,householdId,title:required(data,"title"),dueAt:dateTime(data,"dueAt"),priority:oneOf(data,"priority",["Normal","High"]),assignedMembershipId:uuid(data,"assignedMembershipId")});
+    else if(kind==="create-task")await repository.createHouseholdTask(context,{commandId,householdId,title:required(data,"title"),dueAt:dateTime(data,"dueAt",timeZone),priority:oneOf(data,"priority",["Normal","High"]),assignedMembershipId:uuid(data,"assignedMembershipId")});
     else if(kind==="update-household")await repository.updateHouseholdDetails(context,{commandId,householdId,expectedVersion:positiveInteger(data,"expectedVersion"),displayName:required(data,"displayName"),referralPartnerId:optionalUuid(data,"referralPartnerId")});
     else if(kind==="assign-household")await repository.assignHouseholdOwner(context,{commandId,householdId,expectedVersion:positiveInteger(data,"expectedVersion"),targetMembershipId:uuid(data,"targetMembershipId")});
     else if(kind==="update-primary-contact")await repository.updatePrimaryContact(context,{commandId,householdId,expectedHouseholdVersion:positiveInteger(data,"expectedHouseholdVersion"),expectedContactVersion:positiveInteger(data,"expectedContactVersion"),email:optional(data,"email"),phone:optional(data,"phone"),preferredContactMethod:oneOf(data,"preferredContactMethod",["Phone","Email","SMS"])});
     else if(kind==="add-member")await repository.addHouseholdMember(context,{commandId,householdId,expectedHouseholdVersion:positiveInteger(data,"expectedHouseholdVersion"),existingContactId:value(data,"memberMode")==="existing"?uuid(data,"existingContactId"):undefined,firstName:optional(data,"firstName"),lastName:optional(data,"lastName"),email:optional(data,"email"),phone:optional(data,"phone"),preferredContactMethod:value(data,"memberMode")==="new"?oneOf(data,"preferredContactMethod",["Phone","Email","SMS"]):undefined,relationship:oneOf(data,"relationship",["Joint applicant","Guarantor","Other"]),nameMatchAcknowledged:value(data,"nameMatchAcknowledged")==="yes"});
     else if(kind==="transition-household")await repository.transitionHousehold(context,{commandId,householdId,expectedVersion:positiveInteger(data,"expectedVersion"),targetStatus:oneOf(data,"targetStatus",["Active","Archived"])});
+    else if(kind==="add-note")await repository.addHouseholdNote(context,{commandId,householdId,body:normaliseHouseholdNote(required(data,"body"))});
+    else if(kind==="set-rate-type"){const rateType=oneOf(data,"rateType",rateTypes);await repository.setLoanRateType(context,{commandId,loanRecordId:uuid(data,"loanRecordId"),expectedVersion:positiveInteger(data,"expectedVersion"),rateType});}
     else if(kind==="transition-task")await repository.transitionHouseholdTask(context,{commandId,taskId:uuid(data,"taskId"),expectedVersion:positiveInteger(data,"expectedVersion"),targetStatus:oneOf(data,"targetStatus",["Completed","Cancelled"])});
     else throw new Error("Choose a valid client-book action.");
     revalidatePath("/today");revalidatePath("/client-book");revalidatePath(`/client-book/${householdId}`);
@@ -92,4 +96,4 @@ function optionalUuid(data:FormData,key:string){const result=optional(data,key);
 function positiveInteger(data:FormData,key:string){const result=Number(value(data,key));if(!Number.isInteger(result)||result<1)throw new Error("The record version is invalid. Refresh and try again.");return result;}
 function oneOf<T extends string>(data:FormData,key:string,allowed:readonly T[]){const result=value(data,key);if(!allowed.includes(result as T))throw new Error("Choose a valid option.");return result as T;}
 function optionalDate(data:FormData,key:string){const result=optional(data,key);if(result&&!/^\d{4}-\d{2}-\d{2}$/.test(result))throw new Error("Enter a valid date.");return result;}
-function dateTime(data:FormData,key:string){const result=required(data,key);try{return zonedLocalToIso(result);}catch{throw new Error("Enter a valid due date and time.");}}
+function dateTime(data:FormData,key:string,timeZone:string){const result=required(data,key);try{return zonedLocalToIso(result,timeZone);}catch{throw new Error("Enter a valid due date and time.");}}

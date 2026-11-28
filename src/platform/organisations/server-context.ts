@@ -10,7 +10,7 @@ export interface PersistentMembership {
   displayName: string;
   status: "Active";
   capabilities: string[];
-  organisation: { id: string; name: string; shortName: string; verticalKey: "mortgage"; status: "Active" | "Inactive"; region: string | null };
+  organisation: { id: string; name: string; shortName: string; verticalKey: "mortgage"; status: "Active" | "Inactive"; region: string | null; timeZone?: string };
 }
 
 export function chooseActiveMembership(memberships: PersistentMembership[], preferredOrganisationId?: string) {
@@ -30,5 +30,19 @@ export async function listActiveMemberships(user: User): Promise<PersistentMembe
 export async function resolveActiveOrganisationContext(user: User) {
   const memberships = await listActiveMemberships(user);
   const preferred = (await cookies()).get(ACTIVE_ORGANISATION_COOKIE)?.value;
-  return { memberships, activeMembership: chooseActiveMembership(memberships, preferred) };
+  const activeMembership = chooseActiveMembership(memberships, preferred);
+  if (activeMembership) activeMembership.organisation.timeZone = await readOrganisationTimeZone(activeMembership.organisationId);
+  return { memberships, activeMembership };
+}
+
+/**
+ * The brokerage time zone (migration 20261128090100). Read through a membership-scoped RPC that is not yet in the
+ * generated types; regenerate them with `pnpm db:types` after the migration and drop the cast.
+ */
+async function readOrganisationTimeZone(organisationId: string) {
+  const client = await createServerSupabaseClient();
+  const { data, error } = await client.rpc("organisation_time_zone" as never, { p_organisation_id: organisationId } as never);
+  if (error) throw new Error(`Unable to read the brokerage time zone. Apply migration 20261128090100_brokerage_time_zone.sql: ${error.message}`);
+  if (typeof data !== "string" || !data) throw new Error("The brokerage time zone is missing.");
+  return data as string;
 }

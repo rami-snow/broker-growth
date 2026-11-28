@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePrototype } from "@/components/prototype-provider";
 import { hasCapability } from "@/verticals/mortgage/permissions";
+import { organisationTimeZone } from "@/platform/time/zoned";
 import { buildToday, type TodayReview } from "./today-model";
 import { NeedsActionView } from "./needs-action-view";
 import { TodayView } from "./today-view";
@@ -15,7 +16,7 @@ export function useFixtureTodayModel() {
   const householdNames = Object.fromEntries(households.map(item => [item.id, item.displayName]));
   const members = repo.listMemberships(context);
   const reviews: TodayReview[] = hasCapability(membership, "mortgage.review-opportunity.view") ? clientRepo.listOpportunities(context).map(item => ({ id: item.id, householdId: item.householdId, householdName: householdNames[item.householdId] ?? "Household", type: item.typeKey, triggerDate: item.triggerDate, status: item.lifecycleStatus, ownerName: members.find(member => member.id === item.ownerMembershipId)?.displayName })) : [];
-  const model = buildToday({ now: now(), userName: membership.displayName, leads: hasCapability(membership, "lead.view") ? repo.listLeads(context) : [], memberships: members, tasks: repo.listTasks(context), appointments: repo.listAppointments(context), activities: state.activities.filter(item => item.organisationId === context.organisationId), reviews, householdNames });
+  const model = buildToday({ now: now(), timeZone: organisationTimeZone(state.organisations.find(item => item.id === context.organisationId)), userName: membership.displayName, leads: hasCapability(membership, "lead.view") ? repo.listLeads(context) : [], memberships: members, tasks: repo.listTasks(context), appointments: repo.listAppointments(context), activities: state.activities.filter(item => item.organisationId === context.organisationId), reviews, householdNames });
   return { model, membership };
 }
 

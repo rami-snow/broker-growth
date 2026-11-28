@@ -11,7 +11,8 @@ import type { Task } from "@/platform/tasks/models";
 import type { ConsentChannelStatus } from "@/platform/consent/models";
 import type { MortgageLead, MortgageLeadStatus } from "@/verticals/mortgage/leads/models";
 import { formatDuration, leadResponseState } from "@/verticals/mortgage/leads/response";
-import { formatDayMonth, formatTime, sydneyDay } from "@/features/today/today-model";
+import { dayKey, formatDayMonth, formatTime } from "@/features/today/today-model";
+import { useTimeZone } from "@/components/time-zone";
 import { responseBadge, stageTone, whenLabel } from "./leads-list-view";
 
 export type LeadDetailAction = "assign" | "status" | "contact" | "note" | "task" | "appointment" | "convert" | "referral";
@@ -21,7 +22,7 @@ const steps: MortgageLeadStatus[] = ["New", "Contact attempted", "Contacted", "D
 const consentLabel: Record<string, { label: string; tone: BadgeTone }> = { Recorded: { label: "Recorded", tone: "success" }, "Not recorded": { label: "Not recorded", tone: "warning" }, "Opted out": { label: "Opted out", tone: "danger" } };
 const eventIcon = (type: string) => type === "contact.attempted" ? Phone : type === "note.added" ? StickyNote : type.startsWith("lead.assigned") || type === "lead.claimed" ? User : type === "appointment.created" ? CalendarDays : type === "task.created" || type === "lead.next_action_changed" ? Clock : type === "lead.status_changed" || type === "lead.converted" ? ArrowRight : type === "lead.created" ? FileText : Mail;
 /** Always date and time, e.g. "14 Nov, 8:30 am", in the brokerage time zone. */
-const fullDate = (value: string) => `${formatDayMonth(value)}, ${formatTime(value)}`;
+const fullDateIn = (value: string, timeZone: string) => `${formatDayMonth(value, timeZone)}, ${formatTime(value, timeZone)}`;
 
 /** Lead detail (Figma frame 03). Runtimes supply permissions, modals and side-effect handlers. */
 export function LeadDetailView({ lead, memberships, tasks, appointments, activities, now, permissions, onAction, onAddNote, claimControl, reopenControl, workload, legalNote }: {
@@ -30,6 +31,7 @@ export function LeadDetailView({ lead, memberships, tasks, appointments, activit
   now: Date; permissions: LeadDetailPermissions; onAction: (action: LeadDetailAction) => void; onAddNote: (note: string) => Promise<string | undefined> | string | undefined;
   claimControl?: ReactNode; reopenControl?: ReactNode; workload?: Array<{ name: string; open: number }>; legalNote: string;
 }) {
+  const timeZone = useTimeZone(), fullDate = (value: string) => fullDateIn(value, timeZone);
   const [note, setNote] = useState(""), [noteError, setNoteError] = useState(""), [saving, setSaving] = useState(false);
   useEffect(() => { const requested = new URLSearchParams(window.location.search).get("action"); if (requested === "assign" && permissions.canAssign) onAction("assign"); if (requested === "note" && permissions.canUpdate) onAction("note"); if (requested === "contact" && permissions.canContact) onAction("contact"); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -39,7 +41,7 @@ export function LeadDetailView({ lead, memberships, tasks, appointments, activit
   const openTask = tasks.filter(item => item.status === "Open").sort((a, b) => a.dueAt.localeCompare(b.dueAt))[0];
   const upcoming = appointments.filter(item => item.status === "Booked" && Date.parse(item.startsAt) >= now.getTime() - 3600000).sort((a, b) => a.startsAt.localeCompare(b.startsAt))[0];
   const next = !active ? undefined : openTask ? { title: openTask.title, dueAt: openTask.dueAt } : upcoming ? { title: `Discovery call with ${lead.firstName}`, dueAt: upcoming.startsAt } : lead.nextActionAt ? { title: `Follow up with ${lead.firstName}`, dueAt: lead.nextActionAt } : state.kind === "awaiting" ? { title: `Call ${lead.firstName}`, dueAt: state.dueAt } : undefined;
-  const nextBadge = next && (Date.parse(next.dueAt) < now.getTime() ? { label: "Overdue", tone: "danger" as BadgeTone } : sydneyDay(next.dueAt) === sydneyDay(now) ? { label: "Due today", tone: "info" as BadgeTone } : { label: `Due ${formatDayMonth(next.dueAt)}`, tone: "neutral" as BadgeTone });
+  const nextBadge = next && (Date.parse(next.dueAt) < now.getTime() ? { label: "Overdue", tone: "danger" as BadgeTone } : dayKey(next.dueAt, timeZone) === dayKey(now, timeZone) ? { label: "Due today", tone: "info" as BadgeTone } : { label: `Due ${formatDayMonth(next.dueAt)}`, tone: "neutral" as BadgeTone });
   const lastNote = history.find(event => event.note)?.note;
   const stepIndex = steps.indexOf(lead.status);
   const consent = (channel: "email" | "sms" | "phone") => consentLabel[lead.consentSummary[channel] as ConsentChannelStatus] ?? { label: lead.consentSummary[channel], tone: "neutral" as BadgeTone };
@@ -66,7 +68,7 @@ export function LeadDetailView({ lead, memberships, tasks, appointments, activit
       </section>
       <section className="next-action" aria-labelledby="next-action-heading">
         <header><small>Next action</small>{nextBadge && <Badge tone={nextBadge.tone}>{nextBadge.label}</Badge>}</header>
-        <h3 id="next-action-heading">{next ? `${next.title}, ${whenLabel(next.dueAt, now).replace(/^Today/, "today")}` : active ? "No next action set" : `No next action. This lead is ${lead.status}.`}</h3>
+        <h3 id="next-action-heading">{next ? `${next.title}, ${whenLabel(next.dueAt, now, timeZone).replace(/^Today/, "today")}` : active ? "No next action set" : `No next action. This lead is ${lead.status}.`}</h3>
         <div className="next-action__notes"><small>Latest note</small><span>{lastNote ?? "No call notes yet. Record the outcome after you call."}</span></div>
         {permissions.canUpdate && active && <div className="next-action__actions">
           {permissions.canContact && <Button onClick={() => onAction("contact")}>Mark done</Button>}

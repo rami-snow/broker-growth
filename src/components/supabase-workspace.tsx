@@ -10,6 +10,8 @@ import { PersistentBrokerageSwitcher } from "./persistent-brokerage-switcher";
 import { PersistentCommandBar } from "./command-bar";
 import { PageTitle } from "./page-title";
 import { EnvironmentRibbon, showDevelopmentRibbon } from "./environment-ribbon";
+import { TimeZoneProvider } from "./time-zone";
+import { organisationTimeZone } from "@/platform/time/zoned";
 
 export async function SupabaseWorkspace({ user, returnPath, children, leadsBadge }: { user: User; returnPath: string; children?: ReactNode; leadsBadge?: number }) {
   const { memberships, activeMembership } = await resolveActiveOrganisationContext(user);
@@ -17,7 +19,7 @@ export async function SupabaseWorkspace({ user, returnPath, children, leadsBadge
   getVerticalDefinition(activeMembership.organisation.verticalKey);
   const options = memberships.map(item => ({ id: item.organisationId, name: item.organisation.name }));
   const ribbon = showDevelopmentRibbon();
-  return <div className={`app-shell${ribbon ? " app-shell--ribbon" : ""}`}>
+  return <TimeZoneProvider timeZone={organisationTimeZone(activeMembership.organisation)}><div className={`app-shell${ribbon ? " app-shell--ribbon" : ""}`}>
     {ribbon && <EnvironmentRibbon mode="development"/>}
     <Sidebar
       capabilities={activeMembership.capabilities}
@@ -32,5 +34,5 @@ export async function SupabaseWorkspace({ user, returnPath, children, leadsBadge
       {children ?? <><PageTitle title="Not available yet"/><section className="card migration-state"><span className="migration-icon"><ShieldCheck aria-hidden/></span><h2>This area is not available yet</h2><p>Campaign plans are stored in a later milestone. No fixture business data is shown here.</p></section></>}
     </div></main>
     <PersistentCommandBar capabilities={activeMembership.capabilities}/>
-  </div>;
+  </div></TimeZoneProvider>;
 }

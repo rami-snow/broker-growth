@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CalendarDays, ChevronRight, Clock, Mail, Phone, User, Video } from "lucide-react";
 import { PageTitle } from "@/components/page-title";
 import { Avatar, Badge, Card, MetricCard } from "@/components/ui";
-import { formatTime, NEEDS_ACTION_LIMIT, type NeedsActionItem, type TodayIcon, type TodayModel } from "./today-model";
+import { NEEDS_ACTION_LIMIT, type NeedsActionItem, type TodayIcon, type TodayModel } from "./today-model";
 
 const icons: Record<TodayIcon, typeof Phone> = { phone: Phone, user: User, mail: Mail, calendar: CalendarDays, clock: Clock, video: Video };
 
@@ -25,7 +25,7 @@ export function TodayView({ model, newLeadAction, auditHref }: { model: TodayMod
     <section className="metric-grid" aria-label="Key metrics">
       <MetricCard label="Median first response" description="Median time from lead created to its first logged contact attempt. Target is 1 hour." value={metrics.medianFirstResponse?.label ?? "—"} badge={metrics.medianFirstResponse && <Badge tone={metrics.medianFirstResponse.overTarget ? "danger" : "success"}>{metrics.medianFirstResponse.overTarget ? "Over target" : "On target"}</Badge>} note="Target is 1h"/>
       <MetricCard label="New leads" description="Leads currently in the New stage." value={metrics.newLeads.count} badge={metrics.newLeads.unassigned > 0 ? <Badge tone="warning">Needs owner</Badge> : <Badge tone="success">All owned</Badge>} note={`${metrics.newLeads.unassigned} unassigned`}/>
-      <MetricCard label="Discovery calls today" description="Booked discovery appointments today." value={metrics.discoveryToday.count} badge={metrics.discoveryToday.count > 0 ? <Badge tone="info">On track</Badge> : <Badge>None booked</Badge>} note={metrics.discoveryToday.next ? `${formatTime(metrics.discoveryToday.next.startsAt)}, ${metrics.discoveryToday.nextName}` : undefined}/>
+      <MetricCard label="Discovery calls today" description="Booked discovery appointments today." value={metrics.discoveryToday.count} badge={metrics.discoveryToday.count > 0 ? <Badge tone="info">On track</Badge> : <Badge>None booked</Badge>} note={metrics.discoveryToday.nextLabel}/>
       <MetricCard label="Client reviews due" description="Annual reviews due or overdue." value={metrics.reviewsDue.count} badge={<Badge>This month</Badge>} note={`${metrics.reviewsDue.fixedIn90} fixed expiries in 90 days`}/>
     </section>
     <div className="today-columns">
